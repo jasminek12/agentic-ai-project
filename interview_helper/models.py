@@ -29,6 +29,13 @@ class NextPlan(BaseModel):
     rationale: str
 
 
+class RoundQaItem(BaseModel):
+    """One question + reference answer from a batch JSON round."""
+
+    question: str
+    reference_answer: str
+
+
 class SessionSnapshot(BaseModel):
     """Persisted memory between turns."""
 

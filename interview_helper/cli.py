@@ -49,10 +49,12 @@ def main() -> None:
     while True:
         q = interviewer_agent(
             role=session.role,
+            interview_type="General",
             difficulty=difficulty,
             topic=topic,
             weak_topics=session.weak_topics,
             last_feedback_hint=last_hint,
+            recent_responses=[],
         )
         print(f"\n[Interviewer | {difficulty} | focus: {topic}]\n{q}\n")
 
