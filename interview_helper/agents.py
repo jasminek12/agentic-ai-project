@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from interview_helper.llm_client import chat_completion, model_for
 from interview_helper.models import EvaluationResult, RoundQaItem
 from interview_helper.parse_json import extract_json_array, extract_json_object
@@ -21,6 +23,78 @@ from interview_helper.prompts import (
     supervisor_system,
     supervisor_user,
 )
+
+
+def _normalize_evaluation_payload(data: dict) -> dict:
+    """
+    Accept slight schema drift from models, e.g. nested wrapper objects like:
+    {"evaluation": {...}} or {"result": {...}}.
+    """
+    if not isinstance(data, dict):
+        return data
+    for key in ("evaluation", "result", "scores"):
+        wrapped = data.get(key)
+        if isinstance(wrapped, dict):
+            return wrapped
+    return data
+
+
+def _num_like(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        txt = value.strip()
+        try:
+            return float(txt)
+        except Exception:
+            return None
+    return None
+
+
+def _normalize_10_scale(value: Any) -> float:
+    n = _num_like(value)
+    if n is None:
+        return 6.0
+    # Some models return 0-1 scale despite instructions; map to 1-10.
+    if 0.0 <= n <= 1.0:
+        n *= 10.0
+    return max(1.0, min(10.0, n))
+
+
+def _coerce_evaluation_result(data: dict, *, raw_fallback: str = "") -> EvaluationResult:
+    """
+    Convert imperfect model schemas into strict EvaluationResult.
+    This prevents long user flows from failing at the final step.
+    """
+    d = _normalize_evaluation_payload(data if isinstance(data, dict) else {})
+    # Common alternative key names from model drift.
+    tech = d.get("technical_accuracy", d.get("correctness", d.get("technical", d.get("accuracy"))))
+    comp = d.get("completeness", d.get("coverage"))
+    clar = d.get("clarity", d.get("conciseness"))
+    depth = d.get("depth", d.get("detail"))
+    comm = d.get("communication", d.get("communication_quality", d.get("communication_clarity")))
+    overall = d.get("overall_score", d.get("score", d.get("overall")))
+
+    overall_10 = _normalize_10_scale(overall if overall is not None else tech)
+    overall_i = int(round(overall_10))
+    out = {
+        "technical_accuracy": int(round(_normalize_10_scale(tech if tech is not None else overall_i))),
+        "completeness": int(round(_normalize_10_scale(comp if comp is not None else overall_i))),
+        "clarity": int(round(_normalize_10_scale(clar if clar is not None else overall_i))),
+        "depth": int(round(_normalize_10_scale(depth if depth is not None else overall_i))),
+        "communication": int(round(_normalize_10_scale(comm if comm is not None else overall_i))),
+        "overall_score": round(overall_10, 1),
+        "missed_points": d.get("missed_points") if isinstance(d.get("missed_points"), list) else [],
+        "strengths": d.get("strengths") if isinstance(d.get("strengths"), list) else [],
+        "feedback_summary": str(d.get("feedback_summary", "")).strip(),
+    }
+    if not out["feedback_summary"]:
+        out["feedback_summary"] = (
+            str(raw_fallback).strip()[:280] if str(raw_fallback).strip() else "Evaluation generated with fallback normalization."
+        )
+    return EvaluationResult.model_validate(out)
 
 
 def interviewer_agent(
@@ -60,8 +134,8 @@ def evaluator_agent(*, question: str, answer: str) -> EvaluationResult:
 
     raw = chat_completion(model=model, system=system, user=user, temperature=0.2)
     try:
-        data = extract_json_object(raw)
-        return EvaluationResult.model_validate(data)
+        data = _normalize_evaluation_payload(extract_json_object(raw))
+        return _coerce_evaluation_result(data, raw_fallback=raw)
     except Exception:
         # One repair attempt: ask the same model to output *only* valid JSON.
         repair = chat_completion(
@@ -74,16 +148,37 @@ def evaluator_agent(*, question: str, answer: str) -> EvaluationResult:
             ),
             temperature=0.0,
         )
-        data2 = extract_json_object(repair)
-        return EvaluationResult.model_validate(data2)
+        try:
+            data2 = _normalize_evaluation_payload(extract_json_object(repair))
+            return _coerce_evaluation_result(data2, raw_fallback=repair)
+        except Exception:
+            return _coerce_evaluation_result({}, raw_fallback=repair)
 
 
 def _evaluator_with_system(*, question: str, answer: str, system: str) -> EvaluationResult:
     user = evaluator_user(question=question, answer=answer)
     model = model_for("evaluator")
     raw = chat_completion(model=model, system=system, user=user, temperature=0.2)
-    data = extract_json_object(raw)
-    return EvaluationResult.model_validate(data)
+    try:
+        data = _normalize_evaluation_payload(extract_json_object(raw))
+        return _coerce_evaluation_result(data, raw_fallback=raw)
+    except Exception:
+        # Keep jury mode resilient to minor JSON format drift.
+        repair = chat_completion(
+            model=model,
+            system=system,
+            user=(
+                "Your previous output was not valid JSON for the required schema. "
+                "Output ONLY a single corrected JSON object for the same question/answer.\n\n"
+                + user
+            ),
+            temperature=0.0,
+        )
+        try:
+            data2 = _normalize_evaluation_payload(extract_json_object(repair))
+            return _coerce_evaluation_result(data2, raw_fallback=repair)
+        except Exception:
+            return _coerce_evaluation_result({}, raw_fallback=repair)
 
 
 def jury_evaluator_agent(*, question: str, answer: str) -> tuple[EvaluationResult, EvaluationResult, EvaluationResult, str]:

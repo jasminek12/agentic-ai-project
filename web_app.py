@@ -6,6 +6,12 @@ from pathlib import Path
 import streamlit as st
 
 from interview_helper.behavioral_flashcards import CARDS as BEHAVIORAL_CARDS
+from interview_helper.tools_runtime import (
+    extract_jd_keywords,
+    generate_followup_reminder,
+    generate_networking_message,
+    tailor_resume_bullets,
+)
 from interview_helper.ui_facts import INTERVIEW_FACTS
 
 from interview_helper.action_router import execute_plan_action, execute_supervisor_tool
@@ -140,6 +146,77 @@ def _inject_app_styles() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def _render_career_copilot_panel() -> None:
+    st.markdown("### Career Copilot Workspace")
+    st.caption("End-to-end support: job description analysis, resume tailoring, networking outreach, and follow-up planning.")
+    tab_r, tab_n, tab_a = st.tabs(["Resume Tailor", "Networking", "Application Tracker"])
+
+    with tab_r:
+        jd = st.text_area(
+            "Job description",
+            value=st.session_state.session.active_job_description,
+            height=130,
+            key="career_jd",
+            placeholder="Paste a target job description here...",
+        )
+        bullets_raw = st.text_area(
+            "Resume bullets (one per line)",
+            key="resume_bullets",
+            height=130,
+            placeholder="Built API for payments\nReduced latency by 35%\nLed migration to cloud",
+        )
+        c1, c2 = st.columns(2)
+        if c1.button("Analyze JD keywords", use_container_width=True):
+            st.session_state.session.active_job_description = jd
+            kws = extract_jd_keywords(job_description=jd, top_k=12)
+            st.write(", ".join(kws) if kws else "No keywords found yet.")
+            save_session(SESSION_FILE, st.session_state.session)
+        if c2.button("Tailor bullets", use_container_width=True):
+            src = [x.strip() for x in bullets_raw.splitlines() if x.strip()]
+            if not src or not jd.strip():
+                st.warning("Add both a job description and resume bullets.")
+            else:
+                tailored = tailor_resume_bullets(resume_bullets=src, job_description=jd)
+                st.markdown("**Tailored bullets**")
+                for b in tailored:
+                    st.markdown(f"- {b}")
+
+    with tab_n:
+        name = st.text_input("Your name", value=st.session_state.user_name or "Candidate", key="net_name")
+        company = st.text_input("Target company", key="net_company")
+        role = st.text_input("Target role", value=st.session_state.session.role, key="net_role")
+        shared = st.text_input("Shared context (optional)", key="net_shared", placeholder="same alumni group, mutual contact, same meetup")
+        if st.button("Generate outreach message", use_container_width=True):
+            msg = generate_networking_message(
+                candidate_name=name,
+                target_role=role,
+                company=company or "the company",
+                shared_context=shared,
+            )
+            st.markdown("**Draft message**")
+            st.write(msg)
+            if company.strip() and company not in st.session_state.session.target_companies:
+                st.session_state.session.target_companies.append(company.strip())
+            st.session_state.session.outreach_history.append(msg)
+            st.session_state.session.outreach_history = st.session_state.session.outreach_history[-20:]
+            save_session(SESSION_FILE, st.session_state.session)
+
+    with tab_a:
+        a_company = st.text_input("Company", key="app_company")
+        a_role = st.text_input("Role", value=st.session_state.session.role, key="app_role")
+        days = st.number_input("Days since applied", min_value=0, max_value=90, value=7, step=1, key="app_days")
+        if st.button("Generate follow-up reminder", use_container_width=True):
+            reminder = generate_followup_reminder(company=a_company or "company", role=a_role, days_since_apply=int(days))
+            st.info(reminder)
+            st.session_state.session.application_log.append(reminder)
+            st.session_state.session.application_log = st.session_state.session.application_log[-30:]
+            save_session(SESSION_FILE, st.session_state.session)
+        if st.session_state.session.application_log:
+            st.markdown("**Recent follow-ups**")
+            for item in reversed(st.session_state.session.application_log[-5:]):
+                st.markdown(f"- {item}")
 
 
 def _ensure_state() -> None:
@@ -390,7 +467,7 @@ def _render_generation_panel() -> bool:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Interview Coach",
+        page_title="Career Preparation Copilot",
         page_icon="🎯",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -400,8 +477,8 @@ def main() -> None:
     st.markdown(
         """
         <div class="app-hero" role="region" aria-label="App introduction">
-            <h1>Interview Coach</h1>
-            <p>Adaptive practice: jury scoring, planner actions, tools, and reflection — tuned for clarity and progress.</p>
+            <h1>Agentic Career Preparation Copilot</h1>
+            <p>End-to-end workflow: resume tailoring, networking outreach, interview coaching, and follow-up planning.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -536,6 +613,8 @@ def main() -> None:
 
     if st.session_state.interview_type == "Behavioral":
         _render_behavioral_flashcards()
+
+    _render_career_copilot_panel()
 
     if st.session_state.round_json_raw:
         with st.expander("Generated JSON (export)", expanded=False):

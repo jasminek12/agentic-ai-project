@@ -79,3 +79,7 @@ class SessionSnapshot(BaseModel):
     completed: bool = False
     topic_fail_streak: dict[str, int] = Field(default_factory=dict)
     preferred_question_style: str = "balanced"
+    target_companies: list[str] = Field(default_factory=list)
+    active_job_description: str = ""
+    outreach_history: list[str] = Field(default_factory=list)
+    application_log: list[str] = Field(default_factory=list)
