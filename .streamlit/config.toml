@@ -5,3 +5,12 @@ gatherUsageStats = false
 headless = true
 address = "127.0.0.1"
 port = 8501
+
+# Light, high-contrast theme (WCAG-friendly defaults for body text + controls)
+[theme]
+base = "light"
+primaryColor = "#2563eb"
+backgroundColor = "#f1f5f9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#0f172a"
+font = "sans serif"

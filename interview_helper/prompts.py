@@ -20,6 +20,7 @@ def interviewer_user(
     weak_topics: list[str],
     last_feedback_hint: str,
     recent_responses: list[str],
+    question_style: str = "balanced",
 ) -> str:
     weak = ", ".join(weak_topics) if weak_topics else "none noted"
     hint = last_feedback_hint or "none"
@@ -30,6 +31,7 @@ Target difficulty: {difficulty}
 Primary topic/focus: {topic}
 Known weak areas to probe if relevant: {weak}
 Hint from prior turn: {hint}
+Preferred question style: {question_style}
 Recent candidate responses (summaries):
 {recent}
 
@@ -51,6 +53,20 @@ Use this exact schema (numbers 1-10 for integer fields):
   "feedback_summary": "<2-4 sentences, constructive>"
 }
 Be specific; avoid generic praise."""
+
+
+def evaluator_system_strict() -> str:
+    return """You are a strict interview evaluator focused on technical correctness.
+Return JSON only with the exact schema requested.
+Penalize factual errors and missing edge cases heavily.
+Keep feedback concrete and technical."""
+
+
+def evaluator_system_clarity() -> str:
+    return """You are an interview evaluator focused on communication clarity.
+Return JSON only with the exact schema requested.
+Score structure, clarity, and explainability carefully.
+Keep feedback specific and actionable."""
 
 
 def evaluator_user(*, question: str, answer: str) -> str:
@@ -77,6 +93,67 @@ Question: {question}
 Return a strong reference answer in 4-8 bullet points."""
 
 
+def coach_system() -> str:
+    return """You are an interview coach.
+Produce short, practical remediation content.
+Keep output concise and actionable.
+Do not include markdown code fences."""
+
+
+def coach_user(*, role: str, topic: str, gap: str, mode: str) -> str:
+    return f"""Role: {role}
+Topic focus: {topic}
+Candidate gap: {gap}
+Coaching mode: {mode}
+
+If mode is lesson:
+- Explain the concept in 4-6 bullets.
+- End with one micro-check question.
+
+If mode is drill:
+- Give one focused practice prompt.
+- Give a brief rubric of what a strong answer should include."""
+
+
+def reflection_system() -> str:
+    return """You are a reflection agent for interview coaching.
+Output ONLY a JSON object with keys:
+{
+  "mistake_pattern": "<short diagnosis>",
+  "recommended_style": "<one of: balanced, scenario_based, fundamentals_first, edge_case_heavy>",
+  "strategy_update": "<one sentence>"
+}
+No markdown."""
+
+
+def reflection_user(*, topic: str, question: str, answer: str, feedback: str) -> str:
+    return f"""Topic: {topic}
+Question: {question}
+Candidate answer: {answer}
+Evaluator feedback: {feedback}
+
+Diagnose the mistake pattern and suggest the best next question style."""
+
+
+def supervisor_system() -> str:
+    return """You are a supervisor agent selecting the best coaching tool.
+Return ONLY JSON object:
+{
+  "tool": "<one of: concept_explainer, generate_whiteboard_question, fetch_system_design_template, retrieve_past_mistakes, compare_with_best_answer, none>",
+  "reason": "<short reason>"
+}
+Pick one tool that best improves the candidate's next turn."""
+
+
+def supervisor_user(*, topic: str, missed_points: list[str], score: float) -> str:
+    missed = ", ".join(missed_points) if missed_points else "none"
+    return f"""Current topic: {topic}
+Missed points: {missed}
+Overall score: {score}
+
+Choose one tool."""
+
+
 def round_batch_system() -> str:
     return """You generate interview practice content for a single JSON response only.
 Output a JSON array (no markdown fences, no commentary) with exactly the requested number of objects.
@@ -94,11 +171,13 @@ def round_batch_user(
     topic: str,
     difficulty: str,
     count: int,
+    question_style: str = "balanced",
 ) -> str:
     return f"""Role: {role}
 Interview type: {interview_type}
 Topic focus: {topic}
 Difficulty tone: {difficulty}
+Question style preference: {question_style}
 
 Generate exactly {count} objects in one JSON array.
 Each object must be: {{"question": "<string>", "reference_answer": "<string>"}}

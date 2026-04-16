@@ -6,8 +6,13 @@ It works like a loop:
 
 - **Interviewer agent**: asks exactly one question (role + difficulty + topic)
 - **Evaluator agent**: scores your answer with structured metrics + feedback
-- **Planner (policy)**: updates next difficulty/topic based on the evaluation
-- **Memory**: persists weak/strong topics across turns in a session file
+- **Planner (policy + actions)**: chooses next difficulty/topic *and* intervention action
+- **Action router**: executes plan actions (ask, lesson, drill, review, or end)
+- **Memory + reflection**: persists weak/strong topics, missed-point logs, and turn reflections
+- **Autonomous topic switching**: streak-based remediation when scores stay low on the same focus
+- **Supervisor tool agent**: selects a tool call each turn (explainer, whiteboard drill, templates, mistake retrieval, best-answer compare)
+- **Reflection loop**: diagnoses mistake patterns and updates preferred question style for the next batch
+- **Jury evaluation**: strict vs clarity evaluators with a combined final score
 
 ## Quickstart (Windows + Ollama)
 
@@ -82,8 +87,10 @@ pytest -q
 ## What makes it “agentic”
 
 - **Multiple roles** (interviewer + evaluator) instead of one blob prompt
-- **Planner policy** that makes explicit decisions (difficulty + next focus)
-- **Memory** that persists weak/strong topics across turns
+- **Explicit action policy** that selects from an action space (question/lesson/drill/review/end)
+- **Planner decisions** for difficulty + next focus + intervention payload
+- **Persistent memory + reflection** across turns to support adaptive behavior
+- **Tool execution** that maps supervisor choices to concrete helper outputs
 
 ## Repo layout
 

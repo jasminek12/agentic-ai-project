@@ -5,6 +5,13 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Difficulty = Literal["easy", "medium", "hard"]
+PlannerAction = Literal[
+    "ask_question",
+    "give_lesson",
+    "give_drill",
+    "review_mistakes",
+    "end_session",
+]
 
 
 class EvaluationResult(BaseModel):
@@ -22,11 +29,32 @@ class EvaluationResult(BaseModel):
 
 
 class NextPlan(BaseModel):
-    """What the planner chooses for the next question."""
+    """What the planner chooses for the next turn."""
 
     next_difficulty: Difficulty
     focus_topic: str
     rationale: str
+    action: PlannerAction = "ask_question"
+    action_payload: str = ""
+
+
+class TurnReflection(BaseModel):
+    """Per-turn diagnostic memory used for planning interventions."""
+
+    topic: str
+    score: float
+    mistake_pattern: str = ""
+    intervention_used: str = ""
+    recommended_style: str = "balanced"
+
+
+class JuryEvaluation(BaseModel):
+    """Outputs from multi-evaluator jury mode."""
+
+    strict: EvaluationResult
+    clarity: EvaluationResult
+    final: EvaluationResult
+    judge_summary: str = ""
 
 
 class RoundQaItem(BaseModel):
@@ -43,5 +71,11 @@ class SessionSnapshot(BaseModel):
     weak_topics: list[str] = Field(default_factory=list)
     strong_topics: list[str] = Field(default_factory=list)
     recent_scores: list[float] = Field(default_factory=list)
+    missed_points_log: list[str] = Field(default_factory=list)
+    reflections: list[TurnReflection] = Field(default_factory=list)
     current_topic: str = "general"
     questions_asked: int = 0
+    target_score: float = 8.0
+    completed: bool = False
+    topic_fail_streak: dict[str, int] = Field(default_factory=dict)
+    preferred_question_style: str = "balanced"
