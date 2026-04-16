@@ -1,11 +1,12 @@
-# Agentic Interview Helper (AI Interview Agent)
+# Agentic Career Preparation Copilot
 
-A small **agentic** interview-prep app that runs locally with **Ollama**.
+A local **agentic** career-prep app (Ollama-compatible) for end-to-end job preparation.
 
-It works like a loop:
+It works like a multi-stage workflow:
 
-- **Interviewer agent**: asks exactly one question (role + difficulty + topic)
-- **Evaluator agent**: scores your answer with structured metrics + feedback
+- **Career workspace tools**: JD keyword extraction, resume bullet tailoring, networking outreach drafts, follow-up reminders
+- **Interviewer agent**: asks role-aware questions (technical/behavioral/system design/general)
+- **Evaluator agent**: scores interview answers with structured metrics + feedback
 - **Planner (policy + actions)**: chooses next difficulty/topic *and* intervention action
 - **Action router**: executes plan actions (ask, lesson, drill, review, or end)
 - **Memory + reflection**: persists weak/strong topics, missed-point logs, and turn reflections
@@ -86,17 +87,18 @@ pytest -q
 
 ## What makes it “agentic”
 
-- **Multiple roles** (interviewer + evaluator) instead of one blob prompt
+- **Multiple roles** (interviewer + evaluator + reflection + supervisor tool selector)
 - **Explicit action policy** that selects from an action space (question/lesson/drill/review/end)
 - **Planner decisions** for difficulty + next focus + intervention payload
 - **Persistent memory + reflection** across turns to support adaptive behavior
-- **Tool execution** that maps supervisor choices to concrete helper outputs
+- **Tool execution** across the hiring funnel (resume/networking/interview/follow-up)
 
 ## Repo layout
 
-- `web_app.py`: Streamlit frontend for end-to-end interview sessions
-- `interview_helper/cli.py`: CLI loop (ask → answer → evaluate → plan → persist)
+- `web_app.py`: Streamlit frontend for end-to-end career prep sessions
+- `interview_helper/cli.py`: CLI loop for adaptive interview practice
 - `interview_helper/agents.py`: interviewer/evaluator model calls
+- `interview_helper/tools_runtime.py`: runtime tools for resume/networking/interview/follow-up
 - `interview_helper/prompts.py`: system + user prompts for each agent
 - `interview_helper/planner.py`: deterministic planning policy + memory updates
 - `interview_helper/memory.py`: save/load session file
