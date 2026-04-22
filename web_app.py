@@ -228,6 +228,50 @@ def _inject_app_styles() -> None:
             font-size: 0.86rem;
             margin-top: 0.55rem;
         }
+        .app-inner-hero {
+            background: linear-gradient(140deg, rgba(29, 78, 216, 0.10), rgba(67, 56, 202, 0.10));
+            border: 1px solid rgba(99, 102, 241, 0.18);
+            border-radius: 14px;
+            padding: 0.85rem 1rem;
+            margin: 0.35rem 0 0.75rem 0;
+        }
+        .app-inner-hero p {
+            margin: 0.2rem 0 0 0;
+            color: #475569;
+            font-size: 0.93rem;
+        }
+        .app-inner-hero strong {
+            color: #1e293b;
+        }
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            border-radius: 14px !important;
+            border-color: rgba(148, 163, 184, 0.28) !important;
+            background: rgba(255, 255, 255, 0.78);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        div[data-testid="stExpander"] {
+            border: 1px solid rgba(148, 163, 184, 0.28) !important;
+            border-radius: 12px !important;
+            background: rgba(255, 255, 255, 0.84);
+        }
+        div[data-testid="stMetric"] {
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 12px;
+            padding: 0.5rem 0.6rem;
+        }
+        [data-baseweb="button-group"] {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 12px;
+            padding: 0.2rem;
+        }
+        [data-baseweb="button-group"] button[aria-pressed="true"] {
+            background: linear-gradient(140deg, #2563eb 0%, #4338ca 100%) !important;
+            color: #ffffff !important;
+            border-radius: 10px !important;
+        }
         @media (max-width: 768px) {
             .block-container {
                 padding-left: 0.75rem;
@@ -259,6 +303,15 @@ def _inject_app_styles() -> None:
 
 
 def _render_career_copilot_panel() -> None:
+    st.markdown(
+        """
+        <div class="app-inner-hero">
+            <strong>Career workspace</strong>
+            <p>Build application assets quickly: align bullets, draft outreach, and keep follow-ups ready to send.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.caption(
         "Paste a job description and your bullets, or draft outreach — outputs stay below until you clear the session."
     )
@@ -772,8 +825,14 @@ def main() -> None:
 
     with st.container(border=True):
         st.markdown("## Agentic Career Preparation Copilot")
-        st.caption(
-            "Title, controls, and your answers stay in this panel. Open the sidebar (arrow) for role, topic, and speed settings."
+        st.markdown(
+            """
+            <div class="app-inner-hero">
+                <strong>Your main workspace</strong>
+                <p>Switch between interview practice and career tools. Everything uses the same style and workflow for a smoother experience.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
         workspace = st.segmented_control(
             "Workspace",
