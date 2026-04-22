@@ -182,3 +182,55 @@ Question style preference: {question_style}
 Generate exactly {count} objects in one JSON array.
 Each object must be: {{"question": "<string>", "reference_answer": "<string>"}}
 Output ONLY valid JSON array, no markdown, no other text."""
+
+
+def resume_tailor_system() -> str:
+    return """You rewrite resume achievement bullets to align with a target job description.
+Rules:
+- Preserve factual truth; do not invent employers, dates, metrics, or technologies not implied by the original bullet.
+- Naturally reflect relevant skills and responsibilities from the job description (no keyword stuffing).
+- Prefer strong action verbs; keep quantified outcomes when the source already implies or states them.
+- Each bullet is a single line, roughly 20–45 words.
+Output ONLY a JSON array of strings, same length and order as the input bullets. No markdown, no commentary."""
+
+
+def resume_tailor_user(*, job_description: str, bullets: list[str]) -> str:
+    n = len(bullets)
+    numbered = "\n".join(f"{i + 1}. {b}" for i, b in enumerate(bullets))
+    return f"""Job description:
+{job_description}
+
+Original bullets (rewrite each; return {n} tailored strings in order):
+{numbered}
+
+Return ONLY a JSON array of exactly {n} strings."""
+
+
+def recruiter_outreach_system() -> str:
+    return """You draft short, professional outreach for job seekers (email or LinkedIn-style note).
+Output ONLY a JSON object with keys:
+  "subject": string (concise email subject; use empty string "" if the channel is LinkedIn-style and no subject applies)
+  "body": string (plain text: greeting, 2–4 short paragraphs, specific ask, polite close, sign off with the candidate's first name)
+Rules:
+- Specific to the role and company; warm and respectful of the reader's time.
+- If shared context is provided, weave it in naturally in one sentence.
+- No markdown fences, no bullet lists unless a tiny one-line list is natural; avoid stiff legal or template phrasing.
+- No emoji unless the user context suggests it (default: none)."""
+
+
+def recruiter_outreach_user(
+    *,
+    candidate_name: str,
+    target_role: str,
+    company: str,
+    shared_context: str,
+    channel: str,
+) -> str:
+    ctx = shared_context.strip() or "none"
+    return f"""Channel: {channel}
+Candidate name: {candidate_name}
+Target role: {target_role}
+Company: {company}
+Shared context (connection, event, referral, etc.): {ctx}
+
+Write the JSON object with "subject" and "body"."""
