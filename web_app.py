@@ -83,19 +83,48 @@ def _inject_app_styles() -> None:
         .block-container {
             font-family: "DM Sans", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
             max-width: 1120px;
-            padding-top: 1rem;
+            padding-top: 1.2rem;
             padding-bottom: 2rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            box-sizing: border-box;
         }
         h1, h2, h3 { letter-spacing: -0.02em; }
+        .stApp {
+            background:
+                radial-gradient(1200px 600px at 8% -10%, rgba(59, 130, 246, 0.10), transparent 42%),
+                radial-gradient(900px 500px at 92% -12%, rgba(99, 102, 241, 0.10), transparent 40%),
+                #f6f8fc;
+        }
 
         .app-hero {
-            background: linear-gradient(125deg, #0f172a 0%, #1e293b 38%, #312e81 100%);
+            background: linear-gradient(130deg, #0b132b 0%, #1d4ed8 48%, #4338ca 100%);
             color: #f1f5f9;
             border-radius: 20px;
             padding: 1.5rem 1.65rem;
             margin-bottom: 1.35rem;
-            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
-            border: 1px solid rgba(148, 163, 184, 0.15);
+            box-shadow: 0 18px 38px rgba(37, 99, 235, 0.26);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+            isolation: isolate;
+            animation: heroFloat 9s ease-in-out infinite;
+        }
+        .app-hero::before {
+            content: "";
+            position: absolute;
+            inset: -55% -30% auto auto;
+            width: 260px;
+            height: 260px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0.0) 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        @keyframes heroFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
         }
         .app-hero h1 {
             font-family: "Instrument Sans", "DM Sans", sans-serif;
@@ -117,8 +146,25 @@ def _inject_app_styles() -> None:
             font-weight: 600;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #a5b4fc;
+            color: #c7d2fe;
             margin-bottom: 0.5rem;
+        }
+        .app-feature-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin: 0.65rem 0 0.1rem;
+        }
+        .app-feature-pill {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 12px;
+            padding: 0.52rem 0.62rem;
+            font-size: 0.84rem;
+            color: #e2e8f0;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            line-height: 1.3;
         }
         .app-card {
             background: #ffffff;
@@ -143,6 +189,64 @@ def _inject_app_styles() -> None:
         [data-testid="stSidebar"] {
             border-right: 1px solid #e2e8f0;
             background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+        }
+        div[data-testid="stForm"] {
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 14px;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 0.65rem;
+        }
+        div[data-testid="stForm"] .stTextInput > label {
+            font-weight: 600;
+            color: #334155;
+        }
+        .stButton > button[kind="primaryFormSubmit"],
+        .stButton > button[kind="primary"] {
+            border-radius: 12px !important;
+            border: 1px solid #1d4ed8 !important;
+            background: linear-gradient(140deg, #2563eb 0%, #4338ca 100%) !important;
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+            transition: transform 120ms ease, box-shadow 120ms ease;
+        }
+        .stButton > button[kind="primaryFormSubmit"]:hover,
+        .stButton > button[kind="primary"]:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+        }
+        .app-onboard-shell {
+            max-width: 920px;
+            margin: 0 auto;
+        }
+        .app-onboard-lead {
+            color: #475569;
+            margin: -0.15rem 0 1rem 0;
+        }
+        .app-subtle-note {
+            color: #64748b;
+            font-size: 0.86rem;
+            margin-top: 0.55rem;
+        }
+        @media (max-width: 768px) {
+            .block-container {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+            }
+            .app-hero {
+                border-radius: 14px;
+                padding: 1.1rem 1rem;
+            }
+            .app-hero h1 {
+                font-size: 1.35rem;
+            }
+            .app-hero p {
+                font-size: 0.95rem;
+            }
+            .app-feature-grid {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
         }
         /* Tab strip polish */
         [data-baseweb="tab-list"] button {
@@ -306,7 +410,7 @@ def _ensure_state() -> None:
     if "difficulty" not in st.session_state:
         st.session_state.difficulty = "medium"
     if "topic" not in st.session_state:
-        st.session_state.topic = "data structures and algorithms"
+        st.session_state.topic = "core interview fundamentals"
     if "last_hint" not in st.session_state:
         st.session_state.last_hint = ""
     if "history" not in st.session_state:
@@ -316,7 +420,7 @@ def _ensure_state() -> None:
     if "user_name" not in st.session_state:
         st.session_state.user_name = ""
     if "interview_type" not in st.session_state:
-        st.session_state.interview_type = "Technical"
+        st.session_state.interview_type = "General"
     if "profile_complete" not in st.session_state:
         st.session_state.profile_complete = False
     if "round_size" not in st.session_state:
@@ -465,7 +569,7 @@ def _reset_all() -> None:
     role = st.session_state.session.role if "session" in st.session_state else "Software Engineer"
     st.session_state.session = SessionSnapshot(role=role)
     st.session_state.difficulty = "medium"
-    st.session_state.topic = "data structures and algorithms"
+    st.session_state.topic = "core interview fundamentals"
     st.session_state.last_hint = ""
     st.session_state.history = []
     st.session_state.last_error = ""
@@ -552,55 +656,57 @@ def main() -> None:
     _inject_app_styles()
 
     _ensure_state()
+    # Product decision: keep interview mode auto-managed for a cleaner UX.
+    st.session_state.interview_type = "General"
 
     if not st.session_state.profile_complete:
+        st.markdown('<div class="app-onboard-shell">', unsafe_allow_html=True)
         st.markdown("## Agentic Career Preparation Copilot")
-        st.caption("Set up once — role, interview type, and topic stay editable in the sidebar later.")
+        st.markdown(
+            """
+            <div class="app-hero" role="region" aria-label="Welcome">
+                <div class="app-hero-badge">Practice • Tailor • Outreach</div>
+                <h1>Build interview confidence faster</h1>
+                <p>Generate realistic interview rounds, get structured feedback, tailor your resume to a target job, and draft recruiter-ready messages from one workspace.</p>
+                <div class="app-feature-grid">
+                    <div class="app-feature-pill">Adaptive interview rounds</div>
+                    <div class="app-feature-pill">Resume bullet tailoring</div>
+                    <div class="app-feature-pill">Recruiter-ready outreach drafts</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.markdown('<p class="app-onboard-lead">Quick start: add your name + role, then choose your workspace.</p>', unsafe_allow_html=True)
         _, mid, _ = st.columns([1, 2.2, 1])
         with mid:
             with st.container(border=True):
                 with st.form("onboarding_form"):
                     user_name = st.text_input("Your name", placeholder="e.g. Alex")
                     role = st.text_input("Role you are interviewing for", value="Software Engineer")
-                    interview_type = st.selectbox(
-                        "Interview focus",
-                        options=["Technical", "Behavioral", "System Design", "General"],
-                        index=0,
-                    )
-                    topic = st.text_input(
-                        "Starting topic (optional)",
-                        value="data structures and algorithms",
-                    )
                     submitted = st.form_submit_button("Continue", type="primary", use_container_width=True)
                 if submitted:
                     st.session_state.user_name = user_name.strip()
                     st.session_state.session.role = role.strip() or "Software Engineer"
-                    st.session_state.interview_type = interview_type
-                    st.session_state.topic = topic.strip() or "data structures and algorithms"
+                    st.session_state.interview_type = "General"
+                    st.session_state.topic = "core interview fundamentals"
                     st.session_state.profile_complete = True
                     st.session_state.last_error = ""
                     save_session(SESSION_FILE, st.session_state.session)
                     st.rerun()
+        st.markdown(
+            '<p class="app-subtle-note">Tip: start with 2-3 questions per round for the fastest feedback loop.</p>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
         return
 
     with st.sidebar:
         st.markdown('<p class="app-kicker">Session</p>', unsafe_allow_html=True)
         st.caption("Interview actions (generate, answer) live in the main panel →")
-        st.markdown("### Profile & focus")
+        st.markdown("### Profile")
         role = st.text_input("Target role", value=st.session_state.session.role, key="sb_role")
-        topic = st.text_input("Starting topic", value=st.session_state.topic, key="sb_topic")
-        interview_options = ["Technical", "Behavioral", "System Design", "General"]
-        current_type = (
-            st.session_state.interview_type
-            if st.session_state.interview_type in interview_options
-            else "Technical"
-        )
-        interview_type = st.selectbox(
-            "Interview type",
-            options=interview_options,
-            index=interview_options.index(current_type),
-            key="sb_type",
-        )
+        st.caption("Interview focus and topics adapt automatically from your performance.")
 
         st.divider()
         st.markdown('<p class="app-kicker">Speed vs depth</p>', unsafe_allow_html=True)
@@ -625,8 +731,6 @@ def main() -> None:
         c_apply = st.columns(1)[0]
         if c_apply.button("Save settings", use_container_width=True, type="secondary"):
             st.session_state.session.role = role.strip() or "Software Engineer"
-            st.session_state.topic = topic.strip() or "data structures and algorithms"
-            st.session_state.interview_type = interview_type
             save_session(SESSION_FILE, st.session_state.session)
             st.success("Saved.")
 
@@ -638,9 +742,9 @@ def main() -> None:
         st.divider()
         st.markdown('<p class="app-kicker">Progress</p>', unsafe_allow_html=True)
         if st.session_state.user_name:
-            st.write(f"**{st.session_state.user_name}** · {st.session_state.interview_type}")
+            st.write(f"**{st.session_state.user_name}** · Adaptive interview mode")
         else:
-            st.write(f"**Candidate** · {st.session_state.interview_type}")
+            st.write("**Candidate** · Adaptive interview mode")
         st.metric("Questions completed", s.questions_asked)
         st.metric("Difficulty", st.session_state.difficulty.capitalize())
         st.caption(f"Focus: **{st.session_state.topic}**")
@@ -682,7 +786,7 @@ def main() -> None:
             sum_l, mid_m, mid_r, btn_c = st.columns([2.0, 1.0, 1.0, 1.2], gap="small")
             with sum_l:
                 st.markdown(
-                    f"**{st.session_state.session.role}** · _{st.session_state.interview_type}_ · "
+                    f"**{st.session_state.session.role}** · _adaptive mixed interview_ · "
                     f"**Topic:** {st.session_state.topic}"
                 )
             with mid_m:
@@ -696,8 +800,12 @@ def main() -> None:
                     key="practice_round_size",
                 )
             with mid_r:
-                st.caption("Difficulty")
-                st.markdown(f"**{st.session_state.difficulty}**")
+                st.session_state.difficulty = st.selectbox(
+                    "Difficulty",
+                    options=["easy", "medium", "hard"],
+                    index=["easy", "medium", "hard"].index(st.session_state.difficulty),
+                    key="practice_difficulty",
+                )
             with btn_c:
                 st.write("")  # align button with inputs
                 st.write("")
