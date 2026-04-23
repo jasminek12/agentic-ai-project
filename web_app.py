@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import streamlit as st
@@ -476,13 +477,24 @@ def _render_career_copilot_panel() -> None:
             """,
             unsafe_allow_html=True,
         )
-        strength = st.select_slider(
-            "Rewrite strength",
-            options=["light", "balanced", "aggressive"],
-            value="balanced",
-            help="Light keeps your wording close. Aggressive reframes more strongly for role fit.",
-            key="resume_rewrite_strength",
-        )
+        mode_col, strength_col = st.columns([1, 1.2])
+        with mode_col:
+            tailoring_mode = st.radio(
+                "Tailoring mode",
+                options=["fast", "deep"],
+                horizontal=True,
+                help="Fast uses fewer model calls. Deep performs stronger per-bullet refinement.",
+                key="resume_tailor_mode",
+            )
+        with strength_col:
+            strength = st.select_slider(
+                "Rewrite strength",
+                options=["light", "balanced", "aggressive"],
+                value="balanced",
+                help="Light keeps your wording close. Aggressive reframes more strongly for role fit.",
+                key="resume_rewrite_strength",
+            )
+        st.caption("Typical runtime: fast 6-15s, deep 15-45s depending on model and bullet count.")
         jd = st.text_area(
             "Job description",
             height=160,
@@ -510,13 +522,66 @@ def _render_career_copilot_panel() -> None:
             if not resume_raw.strip() or not jd.strip():
                 st.warning("Add both a job description and resume content.")
             else:
-                with st.spinner("Aligning bullets with the job description…"):
+                st.session_state.career_task_error = ""
+                started = time.perf_counter()
+                with st.status("Tailoring your resume highlights...", expanded=True) as status:
+                    progress = st.progress(0, text="Starting...")
+                    status.write("Stage 1/4: Extracting achievement bullets from your resume.")
+                    progress.progress(22, text="Extracting achievements...")
                     src = extract_resume_achievements(resume_text=resume_raw, max_points=8)
-                    tailored = tailor_resume_bullets(
-                        resume_bullets=src,
-                        job_description=jd,
-                        rewrite_strength=strength,
-                    )
+                    status.write(f"Detected {len(src)} bullets.")
+                    if not src:
+                        st.session_state.career_task_error = (
+                            "Could not detect enough achievement bullets. Paste fuller resume content and retry."
+                        )
+                        progress.progress(100, text="Stopped")
+                        status.update(label="Tailoring stopped", state="error")
+                        st.session_state.career_last_runtime_seconds = time.perf_counter() - started
+                        st.rerun()
+
+                    status.write("Stage 2/4: Reading and prioritizing JD requirements.")
+                    progress.progress(36, text="Analyzing job description...")
+                    st.session_state.career_jd_keywords = extract_jd_keywords(job_description=jd, top_k=14)
+
+                    status.write("Stage 3/4: Rewriting bullets for role fit.")
+                    partial_header = st.empty()
+                    partial_header.markdown("**Live tailoring preview**")
+                    partial_list = st.empty()
+                    tailored: list[str] = []
+                    try:
+                        if tailoring_mode == "deep":
+                            total = max(1, len(src))
+                            for idx, bullet in enumerate(src, start=1):
+                                one = tailor_resume_bullets(
+                                    resume_bullets=[bullet],
+                                    job_description=jd,
+                                    rewrite_strength=strength,
+                                )
+                                out = one[0] if one else (bullet.strip().rstrip(".") + ".")
+                                tailored.append(out)
+                                pct = 36 + int((idx / total) * 52)
+                                progress.progress(min(pct, 90), text=f"Tailoring bullet {idx}/{total}...")
+                                partial_list.markdown("\n".join(f"- {b}" for b in tailored))
+                                if (time.perf_counter() - started) > 20:
+                                    status.write("Taking longer than usual; still tailoring each bullet.")
+                        else:
+                            tailored = tailor_resume_bullets(
+                                resume_bullets=src,
+                                job_description=jd,
+                                rewrite_strength=strength,
+                            )
+                            partial_list.markdown("\n".join(f"- {b}" for b in tailored))
+                            progress.progress(90, text="Applying final quality pass...")
+                    except Exception as e:
+                        st.session_state.career_task_error = f"Tailoring failed: {e}"
+                        progress.progress(100, text="Stopped")
+                        status.update(label="Tailoring failed", state="error")
+                        st.session_state.career_last_runtime_seconds = time.perf_counter() - started
+                        st.rerun()
+
+                    status.write("Stage 4/4: Finalizing and saving outputs.")
+                    progress.progress(100, text="Done")
+                    status.update(label="Tailoring complete", state="complete")
                 pairs = []
                 for i, t in enumerate(tailored):
                     original = src[i] if i < len(src) else ""
@@ -524,8 +589,20 @@ def _render_career_copilot_panel() -> None:
                 st.session_state.career_tailored_bullets = tailored
                 st.session_state.career_tailor_pairs = pairs
                 st.session_state.session.active_job_description = jd
+                st.session_state.career_last_runtime_seconds = time.perf_counter() - started
                 save_session(SESSION_FILE, st.session_state.session)
+                st.toast("Tailoring complete. Review your updated bullets below.", icon="✅")
                 st.rerun()
+
+        if st.session_state.career_task_error:
+            st.error(st.session_state.career_task_error)
+            if st.button("Retry with fast mode", use_container_width=True, type="secondary", key="retry_fast_tailor"):
+                st.session_state.resume_tailor_mode = "fast"
+                st.session_state.career_task_error = ""
+                st.rerun()
+
+        if st.session_state.career_last_runtime_seconds > 0:
+            st.caption(f"Last generation runtime: {st.session_state.career_last_runtime_seconds:.1f}s")
 
         if st.session_state.career_jd_keywords:
             st.markdown("**Keywords from the posting**")
@@ -566,7 +643,12 @@ def _render_career_copilot_panel() -> None:
             placeholder="Referred by Jane Doe, or met at PyConf booth, or alum from UW",
         )
         if st.button("Draft message", use_container_width=True, type="primary"):
-            with st.spinner("Drafting a clear subject line and body…"):
+            started = time.perf_counter()
+            with st.status("Drafting outreach message...", expanded=True) as status:
+                progress = st.progress(0, text="Starting...")
+                status.write("Stage 1/3: Building context from role, company, and channel.")
+                progress.progress(30, text="Preparing prompt...")
+                status.write("Stage 2/3: Generating subject and body.")
                 msg = generate_networking_message(
                     candidate_name=name,
                     target_role=role,
@@ -574,6 +656,10 @@ def _render_career_copilot_panel() -> None:
                     shared_context=shared,
                     channel=ch,
                 )
+                progress.progress(82, text="Applying final polish...")
+                status.write("Stage 3/3: Finalizing and saving draft.")
+                progress.progress(100, text="Done")
+                status.update(label="Outreach draft ready", state="complete")
             st.session_state.career_outreach = msg
             hist_line = (
                 f"Subject: {msg.get('subject', '')}\n\n{msg.get('body', '')}"
@@ -585,6 +671,8 @@ def _render_career_copilot_panel() -> None:
             st.session_state.session.outreach_history.append(hist_line.strip())
             st.session_state.session.outreach_history = st.session_state.session.outreach_history[-20:]
             save_session(SESSION_FILE, st.session_state.session)
+            st.session_state.career_last_runtime_seconds = time.perf_counter() - started
+            st.toast("Message draft ready.", icon="✉️")
             st.rerun()
 
         out = st.session_state.career_outreach
@@ -610,14 +698,25 @@ def _render_career_copilot_panel() -> None:
         a_role = st.text_input("Role", value=st.session_state.session.role, key="app_role")
         days = st.number_input("Days since you applied", min_value=0, max_value=90, value=7, step=1, key="app_days")
         if st.button("Draft follow-up email", use_container_width=True, type="primary"):
-            with st.spinner("Drafting follow-up…"):
+            started = time.perf_counter()
+            with st.status("Drafting follow-up email...", expanded=True) as status:
+                progress = st.progress(0, text="Starting...")
+                status.write("Stage 1/3: Preparing role and application timing context.")
+                progress.progress(28, text="Preparing context...")
+                status.write("Stage 2/3: Generating follow-up message.")
                 reminder = generate_followup_reminder(
                     company=a_company or "the company", role=a_role, days_since_apply=int(days)
                 )
+                progress.progress(84, text="Final wording pass...")
+                status.write("Stage 3/3: Finalizing draft.")
+                progress.progress(100, text="Done")
+                status.update(label="Follow-up draft ready", state="complete")
             st.session_state.career_followup_last = reminder
             st.session_state.session.application_log.append(reminder)
             st.session_state.session.application_log = st.session_state.session.application_log[-30:]
             save_session(SESSION_FILE, st.session_state.session)
+            st.session_state.career_last_runtime_seconds = time.perf_counter() - started
+            st.toast("Follow-up draft ready.", icon="📨")
             st.rerun()
 
         if st.session_state.career_followup_last:
@@ -688,6 +787,10 @@ def _ensure_state() -> None:
         st.session_state.career_outreach = None
     if "career_followup_last" not in st.session_state:
         st.session_state.career_followup_last = ""
+    if "career_task_error" not in st.session_state:
+        st.session_state.career_task_error = ""
+    if "career_last_runtime_seconds" not in st.session_state:
+        st.session_state.career_last_runtime_seconds = 0.0
 
 
 def _generate_round() -> None:
@@ -813,6 +916,8 @@ def _reset_all() -> None:
     st.session_state.resume_content_draft = ""
     st.session_state.career_outreach = None
     st.session_state.career_followup_last = ""
+    st.session_state.career_task_error = ""
+    st.session_state.career_last_runtime_seconds = 0.0
     if SESSION_FILE.exists():
         SESSION_FILE.unlink()
 
