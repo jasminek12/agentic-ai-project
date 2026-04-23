@@ -7,6 +7,7 @@ from pathlib import Path
 import streamlit as st
 
 from interview_helper.behavioral_flashcards import CARDS as BEHAVIORAL_CARDS
+from interview_helper.coding_challenges import CHALLENGES
 from interview_helper.tools_runtime import (
     extract_resume_achievements,
     extract_jd_keywords,
@@ -16,6 +17,7 @@ from interview_helper.tools_runtime import (
 )
 
 from interview_helper.agents import (
+    coding_assistant_agent,
     round_batch_agent,
 )
 from interview_helper.memory import load_session, save_session
@@ -911,6 +913,14 @@ def _ensure_state() -> None:
         st.session_state.practice_track = (
             "Behavioral" if st.session_state.interview_type == "Behavioral" else "Technical"
         )
+    if "coding_selected_id" not in st.session_state:
+        st.session_state.coding_selected_id = CHALLENGES[0]["id"]
+    if "coding_code_draft" not in st.session_state:
+        st.session_state.coding_code_draft = CHALLENGES[0]["starter_code"]
+    if "coding_last_result" not in st.session_state:
+        st.session_state.coding_last_result = None
+    if "coding_ai_help" not in st.session_state:
+        st.session_state.coding_ai_help = ""
 
 
 def _generate_round() -> None:
@@ -1042,6 +1052,10 @@ def _reset_all() -> None:
     st.session_state.career_last_runtime_seconds = 0.0
     st.session_state.ui_tip_idx = 0
     st.session_state.goal_celebrated = False
+    st.session_state.coding_selected_id = CHALLENGES[0]["id"]
+    st.session_state.coding_code_draft = CHALLENGES[0]["starter_code"]
+    st.session_state.coding_last_result = None
+    st.session_state.coding_ai_help = ""
     if SESSION_FILE.exists():
         SESSION_FILE.unlink()
 
@@ -1069,6 +1083,175 @@ def _render_behavioral_flashcards() -> None:
         c_prev, c_next = st.columns(2)
         c_prev.button("← Previous", key="bf_prev", use_container_width=True, on_click=_bf_shift, args=(-1,))
         c_next.button("Next →", key="bf_next", use_container_width=True, on_click=_bf_shift, args=(1,))
+
+
+def _safe_builtins() -> dict:
+    return {
+        "abs": abs,
+        "all": all,
+        "any": any,
+        "bool": bool,
+        "dict": dict,
+        "enumerate": enumerate,
+        "float": float,
+        "int": int,
+        "len": len,
+        "list": list,
+        "max": max,
+        "min": min,
+        "range": range,
+        "reversed": reversed,
+        "set": set,
+        "sorted": sorted,
+        "str": str,
+        "sum": sum,
+        "tuple": tuple,
+        "zip": zip,
+    }
+
+
+def _normalize_output(v: object) -> object:
+    if isinstance(v, tuple):
+        return list(v)
+    return v
+
+
+def _run_coding_tests(challenge: dict, code: str) -> dict:
+    env: dict = {"__builtins__": _safe_builtins()}
+    try:
+        compiled = compile(code, "<candidate_code>", "exec")
+        exec(compiled, env, env)
+    except Exception as e:
+        return {"ok": False, "error": f"Code failed to compile/execute: {e}", "results": []}
+
+    fn_name = str(challenge.get("function_name", "solve"))
+    fn = env.get(fn_name)
+    if not callable(fn):
+        return {"ok": False, "error": f"Function `{fn_name}` not found.", "results": []}
+
+    results: list[dict] = []
+    passed = 0
+    tests = challenge.get("tests", [])
+    for idx, case in enumerate(tests, start=1):
+        args = tuple(case.get("input", ()))
+        expected = case.get("expected")
+        try:
+            got = fn(*args)
+            got_n = _normalize_output(got)
+            exp_n = _normalize_output(expected)
+            ok = got_n == exp_n
+            if ok:
+                passed += 1
+            results.append(
+                {
+                    "index": idx,
+                    "ok": ok,
+                    "input": args,
+                    "expected": exp_n,
+                    "got": got_n,
+                }
+            )
+        except Exception as e:
+            results.append(
+                {
+                    "index": idx,
+                    "ok": False,
+                    "input": args,
+                    "expected": expected,
+                    "got": f"Runtime error: {e}",
+                }
+            )
+    return {"ok": passed == len(tests), "error": "", "results": results, "passed": passed, "total": len(tests)}
+
+
+def _render_coding_practice() -> None:
+    st.markdown(
+        """
+        <div class="app-section-card">
+            <p class="app-section-title">Coding challenge lab</p>
+            <p class="app-section-sub">Practice in a coding-test style loop: read prompt, code, run tests, iterate, and ask AI for hints.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    challenge_titles = [f"{c['title']} ({c['difficulty']})" for c in CHALLENGES]
+    current_idx = 0
+    current_id = st.session_state.coding_selected_id
+    for i, c in enumerate(CHALLENGES):
+        if c["id"] == current_id:
+            current_idx = i
+            break
+    chosen = st.selectbox("Challenge", options=challenge_titles, index=current_idx, key="coding_challenge_select")
+    chosen_idx = challenge_titles.index(chosen)
+    challenge = CHALLENGES[chosen_idx]
+    if st.session_state.coding_selected_id != challenge["id"]:
+        st.session_state.coding_selected_id = challenge["id"]
+        st.session_state.coding_code_draft = challenge["starter_code"]
+        st.session_state.coding_last_result = None
+        st.session_state.coding_ai_help = ""
+        st.rerun()
+
+    st.markdown(f"### {challenge['title']}")
+    st.caption(f"Difficulty: **{challenge['difficulty']}**")
+    st.write(challenge["prompt"])
+    with st.expander("Hints (offline)", expanded=False):
+        for h in challenge["hints"]:
+            st.markdown(f"- {h}")
+
+    st.session_state.coding_code_draft = st.text_area(
+        "Code editor",
+        value=st.session_state.coding_code_draft,
+        key="coding_editor",
+        height=280,
+        placeholder=f"Write your solution in Python. Define `{challenge['function_name']}`.",
+    )
+    c_run, c_reset = st.columns([1.2, 1.0], gap="small")
+    if c_run.button("Run test cases", use_container_width=True, type="primary", key="coding_run_tests"):
+        st.session_state.coding_last_result = _run_coding_tests(challenge, st.session_state.coding_code_draft)
+        st.rerun()
+    if c_reset.button("Reset starter code", use_container_width=True, type="secondary", key="coding_reset_code"):
+        st.session_state.coding_code_draft = challenge["starter_code"]
+        st.session_state.coding_last_result = None
+        st.rerun()
+
+    result = st.session_state.coding_last_result
+    if isinstance(result, dict):
+        if result.get("error"):
+            st.error(result["error"])
+        else:
+            passed = int(result.get("passed", 0))
+            total = int(result.get("total", 0))
+            if result.get("ok"):
+                st.success(f"All tests passed ({passed}/{total}).")
+            else:
+                st.warning(f"Passed {passed}/{total} tests.")
+            for row in result.get("results", []):
+                icon = "✅" if row.get("ok") else "❌"
+                with st.expander(f"{icon} Test {row.get('index')}", expanded=not row.get("ok")):
+                    st.code(f"input={row.get('input')}\nexpected={row.get('expected')}\ngot={row.get('got')}", language=None)
+
+    st.divider()
+    st.markdown("### Live AI assistant")
+    ai_question = st.text_input(
+        "Ask for help (hint, bug diagnosis, complexity review)",
+        key="coding_ai_question",
+        placeholder="Example: Why does my approach fail on duplicates?",
+    )
+    if st.button("Ask AI coach", use_container_width=True, type="secondary", key="coding_ai_help_btn"):
+        if not ai_question.strip():
+            st.warning("Enter a question for the AI coach.")
+        else:
+            with st.status("Analyzing your code and question...", expanded=False):
+                help_text = coding_assistant_agent(
+                    challenge_title=challenge["title"],
+                    prompt=challenge["prompt"],
+                    user_code=st.session_state.coding_code_draft,
+                    question=ai_question.strip(),
+                )
+            st.session_state.coding_ai_help = help_text
+            st.rerun()
+    if st.session_state.coding_ai_help:
+        st.info(st.session_state.coding_ai_help)
 
 
 def _render_generation_panel() -> bool:
@@ -1172,6 +1355,10 @@ def main() -> None:
                     st.session_state.interview_type = "General"
                     st.session_state.practice_track = "Technical"
                     st.session_state.topic = "core interview fundamentals"
+                    st.session_state.coding_selected_id = CHALLENGES[0]["id"]
+                    st.session_state.coding_code_draft = CHALLENGES[0]["starter_code"]
+                    st.session_state.coding_last_result = None
+                    st.session_state.coding_ai_help = ""
                     st.session_state.profile_complete = True
                     st.session_state.last_error = ""
                     save_session(SESSION_FILE, st.session_state.session)
@@ -1223,10 +1410,11 @@ def main() -> None:
         s: SessionSnapshot = st.session_state.session
         st.divider()
         st.markdown('<p class="app-kicker">Progress</p>', unsafe_allow_html=True)
+        current_track = st.session_state.get("practice_track", "Technical")
         if st.session_state.user_name:
-            st.write(f"**{st.session_state.user_name}** · {st.session_state.interview_type} interview mode")
+            st.write(f"**{st.session_state.user_name}** · {current_track} mode")
         else:
-            st.write(f"**Candidate** · {st.session_state.interview_type} interview mode")
+            st.write(f"**Candidate** · {current_track} mode")
         active_days = len(st.session_state.session.login_days)
         st.markdown("### User profile")
         p1, p2 = st.columns(2)
@@ -1346,13 +1534,16 @@ def main() -> None:
             st.markdown("**Interview track**")
             track_label = st.segmented_control(
                 "Choose interview track",
-                options=["Technical", "Behavioral"],
+                options=["Technical", "Behavioral", "Coding"],
                 selection_mode="single",
                 key="practice_track",
                 label_visibility="collapsed",
             )
             selected_track = track_label or "Technical"
-            selected_type = "Behavioral" if selected_track == "Behavioral" else "General"
+            if selected_track == "Behavioral":
+                selected_type = "Behavioral"
+            else:
+                selected_type = "General"
             if st.session_state.interview_type != selected_type:
                 st.session_state.interview_type = selected_type
                 if selected_type == "Behavioral":
@@ -1367,9 +1558,9 @@ def main() -> None:
                 st.rerun()
             sum_l, mid_m, mid_r, btn_c = st.columns([2.0, 1.0, 1.0, 1.2], gap="small")
             with sum_l:
-                mode_label = "behavioral" if st.session_state.interview_type == "Behavioral" else "technical"
+                mode_label = selected_track.lower()
                 st.markdown(
-                    f"**{st.session_state.session.role}** · _adaptive {mode_label} interview_ · "
+                    f"**{st.session_state.session.role}** · _adaptive {mode_label} practice_ · "
                     f"**Topic:** {st.session_state.topic}"
                 )
             with mid_m:
@@ -1381,6 +1572,7 @@ def main() -> None:
                     step=1,
                     help="Fewer questions = faster generation and evaluation.",
                     key="practice_round_size",
+                    disabled=selected_track == "Coding",
                 )
             with mid_r:
                 st.session_state.difficulty = st.selectbox(
@@ -1388,19 +1580,25 @@ def main() -> None:
                     options=["easy", "medium", "hard"],
                     index=["easy", "medium", "hard"].index(st.session_state.difficulty),
                     key="practice_difficulty",
+                    disabled=selected_track == "Coding",
                 )
             with btn_c:
                 st.write("")  # align button with inputs
                 st.write("")
                 if st.button("Generate round", type="primary", use_container_width=True, key="main_generate_round"):
+                    if selected_track == "Coding":
+                        st.session_state.last_error = "Coding track uses challenge runner below (no interview round generation)."
+                        st.rerun()
                     st.session_state._run_generate_round = True
                     st.session_state.last_error = ""
                     st.rerun()
 
-            if st.session_state.interview_type == "Behavioral":
+            if selected_track == "Coding":
+                _render_coding_practice()
+            elif st.session_state.interview_type == "Behavioral":
                 _render_behavioral_flashcards()
 
-            if st.session_state.round_json_raw:
+            if selected_track != "Coding" and st.session_state.round_json_raw:
                 with st.expander("Generated JSON (export)", expanded=False):
                     st.code(st.session_state.round_json_raw, language="json")
                     st.download_button(
@@ -1411,7 +1609,9 @@ def main() -> None:
                         use_container_width=True,
                     )
 
-            if not items or len(items) != n:
+            if selected_track == "Coding":
+                pass
+            elif not items or len(items) != n:
                 st.info(
                     "Set **Questions**, then click **Generate round** above. One model call builds the full set of prompts."
                 )

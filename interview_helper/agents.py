@@ -10,6 +10,8 @@ from interview_helper.prompts import (
     answer_key_user,
     coach_system,
     coach_user,
+    coding_assistant_system,
+    coding_assistant_user,
     critic_system,
     critic_user,
     evaluator_system,
@@ -239,6 +241,21 @@ def reflection_agent(*, topic: str, question: str, answer: str, feedback: str) -
         return pattern, style, strategy
     except Exception:
         return "Unclear pattern", "balanced", "Keep practice adaptive."
+
+
+def coding_assistant_agent(*, challenge_title: str, prompt: str, user_code: str, question: str) -> str:
+    raw = chat_completion(
+        model=model_for("interview"),
+        system=coding_assistant_system(),
+        user=coding_assistant_user(
+            challenge_title=challenge_title,
+            prompt=prompt,
+            user_code=user_code,
+            question=question,
+        ),
+        temperature=0.2,
+    )
+    return raw.strip()
 
 
 def supervisor_tool_agent(*, topic: str, missed_points: list[str], score: float) -> tuple[str, str]:

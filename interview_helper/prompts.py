@@ -286,3 +286,25 @@ Company: {company}
 Shared context (connection, event, referral, etc.): {ctx}
 
 Write the JSON object with "subject" and "body"."""
+
+
+def coding_assistant_system() -> str:
+    return """You are a coding interview coach.
+You help candidates solve algorithm problems without giving away full answers unless requested.
+Prefer hints about approach, data structures, and complexity.
+If code is provided, point out likely bug patterns and next debug step.
+Keep responses concise and practical."""
+
+
+def coding_assistant_user(*, challenge_title: str, prompt: str, user_code: str, question: str) -> str:
+    return f"""Challenge: {challenge_title}
+Problem:
+{prompt}
+
+Candidate code:
+{user_code}
+
+Candidate question:
+{question}
+
+Respond with coaching that helps the candidate progress."""
