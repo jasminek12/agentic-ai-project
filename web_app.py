@@ -907,6 +907,10 @@ def _ensure_state() -> None:
         st.session_state.ui_tip_idx = 0
     if "goal_celebrated" not in st.session_state:
         st.session_state.goal_celebrated = False
+    if "practice_track" not in st.session_state:
+        st.session_state.practice_track = (
+            "Behavioral" if st.session_state.interview_type == "Behavioral" else "Technical"
+        )
 
 
 def _generate_round() -> None:
@@ -1017,6 +1021,8 @@ def _reset_all() -> None:
     st.session_state.history = []
     st.session_state.last_error = ""
     st.session_state.profile_complete = False
+    st.session_state.interview_type = "General"
+    st.session_state.practice_track = "Technical"
     st.session_state.round_items = []
     st.session_state.round_json_raw = ""
     st.session_state.user_answers = []
@@ -1120,8 +1126,11 @@ def main() -> None:
     _inject_app_styles()
 
     _ensure_state()
-    # Product decision: keep interview mode auto-managed for a cleaner UX.
-    st.session_state.interview_type = "General"
+    today_key = datetime.now().date().isoformat()
+    if today_key not in st.session_state.session.login_days:
+        st.session_state.session.login_days.append(today_key)
+        st.session_state.session.login_days = st.session_state.session.login_days[-120:]
+        save_session(SESSION_FILE, st.session_state.session)
     tips = [
         "Keep answers in a crisp structure: context, decision, impact.",
         "When unsure, narrate your assumptions first; interviewers reward clarity.",
@@ -1161,6 +1170,7 @@ def main() -> None:
                     st.session_state.user_name = user_name.strip()
                     st.session_state.session.role = role.strip() or "Candidate"
                     st.session_state.interview_type = "General"
+                    st.session_state.practice_track = "Technical"
                     st.session_state.topic = "core interview fundamentals"
                     st.session_state.profile_complete = True
                     st.session_state.last_error = ""
@@ -1214,16 +1224,23 @@ def main() -> None:
         st.divider()
         st.markdown('<p class="app-kicker">Progress</p>', unsafe_allow_html=True)
         if st.session_state.user_name:
-            st.write(f"**{st.session_state.user_name}** · Adaptive interview mode")
+            st.write(f"**{st.session_state.user_name}** · {st.session_state.interview_type} interview mode")
         else:
-            st.write("**Candidate** · Adaptive interview mode")
+            st.write(f"**Candidate** · {st.session_state.interview_type} interview mode")
+        active_days = len(st.session_state.session.login_days)
+        st.markdown("### User profile")
+        p1, p2 = st.columns(2)
+        p1.metric("Active days", str(active_days))
+        p2.metric("Questions answered", str(s.questions_asked))
         st.metric("Questions completed", s.questions_asked)
         st.metric("Difficulty", st.session_state.difficulty.capitalize())
         st.caption(f"Focus: **{st.session_state.topic}**")
         st.caption(f"Question style: **{s.preferred_question_style}**")
         st.caption(f"Target **{s.target_score}/10** · Goal {'reached' if s.completed else 'in progress'}")
-        st.caption("Weak: " + (", ".join(s.weak_topics) or "—"))
-        st.caption("Strong: " + (", ".join(s.strong_topics) or "—"))
+        strong_preview = ", ".join(s.strong_topics[-4:]) or "—"
+        weak_preview = ", ".join(s.weak_topics[-4:]) or "—"
+        st.caption(f"Strong topics: {strong_preview}")
+        st.caption(f"Weak topics: {weak_preview}")
         latest = s.recent_scores[-1] if s.recent_scores else 0.0
         trailing = (
             sum(s.recent_scores[-3:]) / min(len(s.recent_scores), 3)
@@ -1326,10 +1343,33 @@ def main() -> None:
                 """,
                 unsafe_allow_html=True,
             )
+            st.markdown("**Interview track**")
+            track_label = st.segmented_control(
+                "Choose interview track",
+                options=["Technical", "Behavioral"],
+                selection_mode="single",
+                key="practice_track",
+                label_visibility="collapsed",
+            )
+            selected_track = track_label or "Technical"
+            selected_type = "Behavioral" if selected_track == "Behavioral" else "General"
+            if st.session_state.interview_type != selected_type:
+                st.session_state.interview_type = selected_type
+                if selected_type == "Behavioral":
+                    st.session_state.topic = "behavioral storytelling (STAR)"
+                elif st.session_state.topic.lower().startswith("behavioral"):
+                    st.session_state.topic = "core interview fundamentals"
+                st.session_state.round_items = []
+                st.session_state.round_json_raw = ""
+                st.session_state.user_answers = []
+                _clear_answer_draft_keys()
+                st.session_state.last_error = ""
+                st.rerun()
             sum_l, mid_m, mid_r, btn_c = st.columns([2.0, 1.0, 1.0, 1.2], gap="small")
             with sum_l:
+                mode_label = "behavioral" if st.session_state.interview_type == "Behavioral" else "technical"
                 st.markdown(
-                    f"**{st.session_state.session.role}** · _adaptive mixed interview_ · "
+                    f"**{st.session_state.session.role}** · _adaptive {mode_label} interview_ · "
                     f"**Topic:** {st.session_state.topic}"
                 )
             with mid_m:

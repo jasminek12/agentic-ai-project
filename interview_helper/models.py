@@ -83,3 +83,4 @@ class SessionSnapshot(BaseModel):
     active_job_description: str = ""
     outreach_history: list[str] = Field(default_factory=list)
     application_log: list[str] = Field(default_factory=list)
+    login_days: list[str] = Field(default_factory=list)
