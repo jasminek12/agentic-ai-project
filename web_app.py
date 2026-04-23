@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -67,6 +68,15 @@ def _filled_answer_count() -> tuple[int, int]:
         elif j < len(st.session_state.user_answers) and str(st.session_state.user_answers[j]).strip():
             c += 1
     return (c, n)
+
+
+def _time_based_greeting() -> str:
+    hour = datetime.now().hour
+    if hour < 12:
+        return "Good morning"
+    if hour < 18:
+        return "Good afternoon"
+    return "Good evening"
 
 
 def _inject_app_styles() -> None:
@@ -445,6 +455,108 @@ def _inject_app_styles() -> None:
         [data-baseweb="tab-list"] button {
             font-weight: 600 !important;
         }
+        .app-shell {
+            position: relative;
+            overflow: hidden;
+        }
+        .app-shell::before,
+        .app-shell::after {
+            content: "";
+            position: absolute;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            filter: blur(48px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .app-shell::before {
+            top: -120px;
+            right: -70px;
+            background: rgba(37, 99, 235, 0.14);
+        }
+        .app-shell::after {
+            bottom: -120px;
+            left: -90px;
+            background: rgba(99, 102, 241, 0.11);
+        }
+        .app-shell > * {
+            position: relative;
+            z-index: 1;
+        }
+        .app-pulse-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #16a34a;
+            margin-right: 0.35rem;
+            box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4);
+            animation: pulseDot 1.6s infinite;
+        }
+        @keyframes pulseDot {
+            0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+            70% { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+        }
+        .app-spotlight {
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            border-radius: 14px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(238, 242, 255, 0.8));
+            padding: 0.75rem 0.9rem;
+            margin: 0.35rem 0 0.8rem;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+        .app-spotlight-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: #475569;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .app-spotlight-tip {
+            margin: 0;
+            color: #0f172a;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+        .app-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.55rem;
+            margin: 0.55rem 0 0.45rem;
+        }
+        .app-kpi-card {
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 0.58rem 0.66rem;
+            transition: transform 140ms ease, box-shadow 140ms ease;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+        }
+        .app-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
+        }
+        .app-kpi-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: #64748b;
+            margin-bottom: 0.18rem;
+        }
+        .app-kpi-value {
+            font-size: 1rem;
+            color: #0f172a;
+            font-weight: 750;
+            margin: 0;
+        }
+        @media (max-width: 768px) {
+            .app-kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -494,7 +606,7 @@ def _render_career_copilot_panel() -> None:
                 help="Light keeps your wording close. Aggressive reframes more strongly for role fit.",
                 key="resume_rewrite_strength",
             )
-        st.caption("Typical runtime: fast 6-15s, deep 15-45s depending on model and bullet count.")
+        st.caption("Runtime varies by model and system load.")
         jd = st.text_area(
             "Job description",
             height=160,
@@ -791,6 +903,10 @@ def _ensure_state() -> None:
         st.session_state.career_task_error = ""
     if "career_last_runtime_seconds" not in st.session_state:
         st.session_state.career_last_runtime_seconds = 0.0
+    if "ui_tip_idx" not in st.session_state:
+        st.session_state.ui_tip_idx = 0
+    if "goal_celebrated" not in st.session_state:
+        st.session_state.goal_celebrated = False
 
 
 def _generate_round() -> None:
@@ -918,6 +1034,8 @@ def _reset_all() -> None:
     st.session_state.career_followup_last = ""
     st.session_state.career_task_error = ""
     st.session_state.career_last_runtime_seconds = 0.0
+    st.session_state.ui_tip_idx = 0
+    st.session_state.goal_celebrated = False
     if SESSION_FILE.exists():
         SESSION_FILE.unlink()
 
@@ -1004,6 +1122,14 @@ def main() -> None:
     _ensure_state()
     # Product decision: keep interview mode auto-managed for a cleaner UX.
     st.session_state.interview_type = "General"
+    tips = [
+        "Keep answers in a crisp structure: context, decision, impact.",
+        "When unsure, narrate your assumptions first; interviewers reward clarity.",
+        "Use one concrete metric in every resume bullet to increase credibility.",
+        "Practice one weak topic deeply today instead of touching many lightly.",
+        "End behavioral answers with what you learned and what changed after.",
+    ]
+    tip_idx = int(st.session_state.ui_tip_idx) % len(tips)
 
     if not st.session_state.profile_complete:
         st.markdown('<div class="app-onboard-shell">', unsafe_allow_html=True)
@@ -1098,7 +1224,35 @@ def main() -> None:
         st.caption(f"Target **{s.target_score}/10** · Goal {'reached' if s.completed else 'in progress'}")
         st.caption("Weak: " + (", ".join(s.weak_topics) or "—"))
         st.caption("Strong: " + (", ".join(s.strong_topics) or "—"))
-
+        latest = s.recent_scores[-1] if s.recent_scores else 0.0
+        trailing = (
+            sum(s.recent_scores[-3:]) / min(len(s.recent_scores), 3)
+            if s.recent_scores
+            else 0.0
+        )
+        streak = sum(1 for score in reversed(s.recent_scores) if score >= s.target_score)
+        st.markdown(
+            f"""
+            <div class="app-kpi-grid">
+                <div class="app-kpi-card">
+                    <div class="app-kpi-label">Latest</div>
+                    <p class="app-kpi-value">{latest:.1f}/10</p>
+                </div>
+                <div class="app-kpi-card">
+                    <div class="app-kpi-label">Last 3 Avg</div>
+                    <p class="app-kpi-value">{trailing:.1f}/10</p>
+                </div>
+                <div class="app-kpi-card">
+                    <div class="app-kpi-label">Goal Streak</div>
+                    <p class="app-kpi-value">{streak}</p>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if s.recent_scores:
+            st.caption("Momentum")
+            st.line_chart(s.recent_scores, height=120, use_container_width=True)
         items_sb = st.session_state.round_items
         n_sb = st.session_state.round_size
         if items_sb and len(items_sb) == n_sb:
@@ -1116,10 +1270,11 @@ def main() -> None:
     items = st.session_state.round_items
     n = st.session_state.round_size
     display_name = (st.session_state.user_name or "").strip() or "there"
+    greeting = _time_based_greeting()
 
     with st.container(border=True):
         st.markdown('<div class="app-shell">', unsafe_allow_html=True)
-        st.markdown(f"## Hi {display_name}, let's begin your prep")
+        st.markdown(f"## {greeting}, {display_name}")
         st.markdown(
             f"""
             <div class="app-topbar">
@@ -1127,7 +1282,7 @@ def main() -> None:
                     <div class="app-topbar-title">Agentic Career Readiness Assistant</div>
                     <div class="app-topbar-sub">Interview practice + JD alignment + outreach in one workspace</div>
                 </div>
-                <div class="app-chip">{st.session_state.session.role}</div>
+                <div class="app-chip"><span class="app-pulse-dot"></span>{st.session_state.session.role}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -1141,6 +1296,19 @@ def main() -> None:
             """,
             unsafe_allow_html=True,
         )
+        tip_l, tip_r = st.columns([3.2, 1.2], gap="small")
+        with tip_l:
+            st.caption("Want a quick edge before the next step?")
+        with tip_r:
+            with st.popover("✨ Coach tip"):
+                st.markdown(f"**{tips[tip_idx]}**")
+                tprev, tnext = st.columns(2)
+                if tprev.button("Previous", key="tip_prev_main_btn", use_container_width=True):
+                    st.session_state.ui_tip_idx = (tip_idx - 1) % len(tips)
+                    st.rerun()
+                if tnext.button("Next", key="tip_next_main_btn", use_container_width=True):
+                    st.session_state.ui_tip_idx = (tip_idx + 1) % len(tips)
+                    st.rerun()
         workspace = st.segmented_control(
             "Workspace",
             options=["Interview practice", "Career workspace"],
@@ -1264,6 +1432,21 @@ def main() -> None:
                 m2.metric("Questions graded", str(st.session_state.session.questions_asked))
                 m3.metric("Toward goal", f"{progress}%")
                 st.progress(progress / 100.0, text=f"Target: {st.session_state.session.target_score}/10")
+                badges: list[str] = []
+                if recent_score >= 8.0:
+                    badges.append("High scorer")
+                if st.session_state.session.questions_asked >= 10:
+                    badges.append("Consistent practicer")
+                if len(st.session_state.session.weak_topics) >= 3:
+                    badges.append("Gap hunter")
+                if st.session_state.session.completed:
+                    badges.append("Goal reached")
+                if badges:
+                    st.markdown("**Achievements unlocked**")
+                    st.caption(" · ".join(f"🏅 {b}" for b in badges))
+                    if st.session_state.session.completed and not st.session_state.goal_celebrated:
+                        st.balloons()
+                        st.session_state.goal_celebrated = True
 
             if st.session_state.history:
                 st.divider()
