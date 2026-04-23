@@ -47,3 +47,16 @@ def test_generate_networking_message_template_fallback(monkeypatch: pytest.Monke
     )
     assert d["subject"] == ""
     assert "Acme" in d["body"] and "Alex" in d["body"]
+
+
+def test_extract_resume_achievements_parses_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_chat(*, model, system, user, temperature=0.4, max_retries=2):
+        return '["Reduced API latency by 35% for checkout service", "Led migration from monolith to services"]'
+
+    monkeypatch.setattr(tr, "chat_completion", fake_chat)
+    out = tr.extract_resume_achievements(
+        resume_text="long pasted resume text",
+        max_points=2,
+    )
+    assert len(out) == 2
+    assert "latency" in out[0].lower()

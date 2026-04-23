@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from interview_helper.agents import answer_key_agent, coaching_agent
@@ -98,7 +99,85 @@ def _coerce_string_list(raw: Any, *, expected: int) -> list[str]:
     return []
 
 
-def tailor_resume_bullets(*, resume_bullets: list[str], job_description: str) -> list[str]:
+def extract_resume_achievements(*, resume_text: str, max_points: int = 8) -> list[str]:
+    """
+    Extract achievement-like resume points from free-form pasted resume text.
+    Uses one LLM extraction pass with a heuristic fallback.
+    """
+    txt = (resume_text or "").strip()
+    if not txt:
+        return []
+
+    target = max(3, min(int(max_points), 12))
+    model = model_for("interview")
+    system = (
+        "You extract resume achievement bullets from raw resume text. "
+        "Output ONLY a JSON array of strings. "
+        "Return exactly the strongest, concrete, role-relevant achievements (impact, ownership, outcomes), "
+        "not section headers, contact info, or generic skill lists."
+    )
+    user = (
+        f"Resume text:\n{txt}\n\n"
+        f"Return {target} concise achievement bullets as a JSON array of strings. "
+        "Each bullet should be one line and resume-ready."
+    )
+    try:
+        raw = chat_completion(model=model, system=system, user=user, temperature=0.15)
+        arr = extract_json_array(raw)
+        coerced = _coerce_string_list(arr, expected=target)
+        if coerced:
+            return coerced
+        # Allow variable length if model returns fewer high-quality bullets.
+        if isinstance(arr, list):
+            loose = [str(x).strip() for x in arr if str(x).strip()]
+            if loose:
+                return loose[:target]
+    except Exception:
+        pass
+
+    # Heuristic fallback: keep substantial lines, skip obvious headers/contact info.
+    lines = [ln.strip(" -•*\t") for ln in txt.splitlines() if ln.strip()]
+    bad_tokens = (
+        "linkedin",
+        "github",
+        "http://",
+        "https://",
+        "@",
+        "email",
+        "phone",
+        "address",
+        "skills",
+        "education",
+        "certifications",
+        "projects",
+        "experience",
+        "summary",
+    )
+    out: list[str] = []
+    for ln in lines:
+        low = ln.lower()
+        if any(tok in low for tok in bad_tokens):
+            continue
+        if len(ln.split()) < 6:
+            continue
+        if re.fullmatch(r"[A-Za-z ]{1,30}", ln) and ln.istitle():
+            continue
+        out.append(ln.rstrip(".") + ".")
+    if out:
+        return out[:target]
+
+    # Last resort: sentence chunks from full text.
+    sents = [s.strip() for s in re.split(r"[.\n;]+", txt) if s.strip()]
+    sents = [s for s in sents if len(s.split()) >= 6]
+    return [s.rstrip(".") + "." for s in sents[:target]]
+
+
+def tailor_resume_bullets(
+    *,
+    resume_bullets: list[str],
+    job_description: str,
+    rewrite_strength: str = "balanced",
+) -> list[str]:
     """
     Rewrite bullets to align with the job description using the interview LLM.
     Falls back to a light keyword weave only if the model call or JSON parse fails.
@@ -110,20 +189,18 @@ def tailor_resume_bullets(*, resume_bullets: list[str], job_description: str) ->
 
     model = model_for("interview")
     system = resume_tailor_system()
-    user = resume_tailor_user(job_description=jd, bullets=src)
+    strength = (rewrite_strength or "balanced").strip().lower()
+    if strength not in {"light", "balanced", "aggressive"}:
+        strength = "balanced"
+    user = resume_tailor_user(job_description=jd, bullets=src, rewrite_strength=strength)
 
     def _fallback() -> list[str]:
-        kws = extract_jd_keywords(job_description=jd, top_k=8)
-        out: list[str] = []
-        for i, b in enumerate(src):
-            hint = kws[i % len(kws)] if kws else "relevant impact"
-            out.append(
-                f"{b.rstrip('.')}, emphasizing alignment with {hint} and measurable results where supported by the original."
-            )
-        return out
+        # If the model output is unusable, preserve meaning by returning cleaned originals.
+        # This avoids awkward synthetic phrasing that can hurt resume quality.
+        return [b.strip().rstrip(".") + "." for b in src]
 
     try:
-        raw = chat_completion(model=model, system=system, user=user, temperature=0.35)
+        raw = chat_completion(model=model, system=system, user=user, temperature=0.2)
         arr = extract_json_array(raw)
         coerced = _coerce_string_list(arr, expected=len(src))
         if coerced:

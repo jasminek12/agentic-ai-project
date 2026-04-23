@@ -1,4 +1,4 @@
-# Agentic Career Preparation Copilot
+# Agentic Career Readiness Assistant
 
 A local **agentic** career-prep app (Ollama-compatible) for end-to-end job preparation.
 

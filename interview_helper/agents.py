@@ -10,6 +10,8 @@ from interview_helper.prompts import (
     answer_key_user,
     coach_system,
     coach_user,
+    critic_system,
+    critic_user,
     evaluator_system,
     evaluator_system_clarity,
     evaluator_system_strict,
@@ -253,6 +255,51 @@ def supervisor_tool_agent(*, topic: str, missed_points: list[str], score: float)
         return tool, reason
     except Exception:
         return "none", "No tool selected."
+
+
+def critic_agent(
+    *,
+    topic: str,
+    question: str,
+    answer: str,
+    evaluation: EvaluationResult,
+    planner_action: str,
+    planner_focus_topic: str,
+    intervention_text: str,
+    tool_name: str,
+    tool_output: str,
+) -> tuple[bool, float, str, str, str]:
+    raw = chat_completion(
+        model=model_for("evaluator"),
+        system=critic_system(),
+        user=critic_user(
+            topic=topic,
+            question=question,
+            answer=answer,
+            score=evaluation.overall_score,
+            missed_points=evaluation.missed_points,
+            planner_action=planner_action,
+            planner_focus_topic=planner_focus_topic,
+            intervention_text=intervention_text,
+            tool_name=tool_name,
+            tool_output=tool_output,
+        ),
+        temperature=0.1,
+    )
+    try:
+        data = extract_json_object(raw)
+        approved = bool(data.get("approved", False))
+        c = _num_like(data.get("confidence"))
+        confidence = max(0.0, min(1.0, c if c is not None else 0.5))
+        reason = str(data.get("reason", "")).strip() or "No critic reason provided."
+        suggested_action = str(data.get("suggested_action", "")).strip() or "give_lesson"
+        suggested_focus = str(data.get("suggested_focus_topic", "")).strip() or planner_focus_topic
+        return approved, confidence, reason, suggested_action, suggested_focus
+    except Exception:
+        fallback_approved = evaluation.overall_score >= 7.0 or (planner_action in {"give_lesson", "give_drill"} and bool(evaluation.missed_points))
+        fallback_reason = "Fallback critic decision due to JSON parse failure."
+        fallback_focus = evaluation.missed_points[0] if evaluation.missed_points else planner_focus_topic
+        return fallback_approved, 0.35, fallback_reason, "give_lesson", fallback_focus
 
 
 def _items_from_array(arr: list) -> list[RoundQaItem]:

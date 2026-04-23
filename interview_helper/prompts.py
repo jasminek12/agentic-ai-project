@@ -154,6 +154,50 @@ Overall score: {score}
 Choose one tool."""
 
 
+def critic_system() -> str:
+    return """You are a strict agentic critic that verifies whether a planned intervention is appropriate.
+Output ONLY a JSON object:
+{
+  "approved": <true|false>,
+  "confidence": <float 0-1>,
+  "reason": "<short reason>",
+  "suggested_action": "<one of: ask_question, give_lesson, give_drill, review_mistakes, end_session>",
+  "suggested_focus_topic": "<short topic hint>"
+}
+Rules:
+- Approve only if the intervention clearly addresses the evaluated gaps and score profile.
+- If not approved, suggest a better next action and a focus topic.
+- Keep reason concise and concrete."""
+
+
+def critic_user(
+    *,
+    topic: str,
+    question: str,
+    answer: str,
+    score: float,
+    missed_points: list[str],
+    planner_action: str,
+    planner_focus_topic: str,
+    intervention_text: str,
+    tool_name: str,
+    tool_output: str,
+) -> str:
+    missed = ", ".join(missed_points) if missed_points else "none"
+    return f"""Current topic: {topic}
+Question: {question}
+Candidate answer: {answer}
+Evaluation overall score: {score}
+Missed points: {missed}
+Planner action: {planner_action}
+Planner focus topic: {planner_focus_topic}
+Intervention text: {intervention_text}
+Tool used: {tool_name}
+Tool output: {tool_output}
+
+Decide whether this intervention is acceptable for the next step."""
+
+
 def round_batch_system() -> str:
     return """You generate interview practice content for a single JSON response only.
 Output a JSON array (no markdown fences, no commentary) with exactly the requested number of objects.
@@ -194,14 +238,22 @@ Rules:
 Output ONLY a JSON array of strings, same length and order as the input bullets. No markdown, no commentary."""
 
 
-def resume_tailor_user(*, job_description: str, bullets: list[str]) -> str:
+def resume_tailor_user(*, job_description: str, bullets: list[str], rewrite_strength: str = "balanced") -> str:
     n = len(bullets)
     numbered = "\n".join(f"{i + 1}. {b}" for i, b in enumerate(bullets))
+    strength_hint = {
+        "light": "Light rewrite: keep wording close to original bullets; mostly tighten phrasing and align terms.",
+        "balanced": "Balanced rewrite: improve clarity and alignment while preserving original framing and claims.",
+        "aggressive": "Aggressive rewrite: stronger reframing for target role fit, but still do not invent facts.",
+    }.get(rewrite_strength, "Balanced rewrite: improve clarity and alignment while preserving original framing and claims.")
     return f"""Job description:
 {job_description}
 
 Original bullets (rewrite each; return {n} tailored strings in order):
 {numbered}
+
+Rewrite mode:
+{strength_hint}
 
 Return ONLY a JSON array of exactly {n} strings."""
 

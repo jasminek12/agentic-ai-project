@@ -6,23 +6,19 @@ import streamlit as st
 
 from interview_helper.behavioral_flashcards import CARDS as BEHAVIORAL_CARDS
 from interview_helper.tools_runtime import (
+    extract_resume_achievements,
     extract_jd_keywords,
     generate_followup_reminder,
     generate_networking_message,
     tailor_resume_bullets,
 )
 
-from interview_helper.action_router import execute_plan_action, execute_supervisor_tool
 from interview_helper.agents import (
-    evaluator_agent,
-    jury_evaluator_agent,
-    reflection_agent,
     round_batch_agent,
-    supervisor_tool_agent,
 )
 from interview_helper.memory import load_session, save_session
 from interview_helper.models import SessionSnapshot
-from interview_helper.planner import plan_next, update_memory
+from interview_helper.orchestrator import run_agentic_turn
 
 SESSION_FILE = Path(".interview_session.json")
 
@@ -78,18 +74,27 @@ def _inject_app_styles() -> None:
         """
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
         <style>
         .block-container {
-            font-family: "DM Sans", "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+            font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
             max-width: 1120px;
-            padding-top: 1.2rem;
+            padding-top: 2rem;
             padding-bottom: 2rem;
             padding-left: 1rem;
             padding-right: 1rem;
             box-sizing: border-box;
+            color: #0f172a;
+            line-height: 1.5;
         }
-        h1, h2, h3 { letter-spacing: -0.02em; }
+        h1, h2, h3 {
+            letter-spacing: -0.02em;
+            font-family: "Manrope", "Inter", ui-sans-serif, system-ui, sans-serif;
+            color: #0b1220;
+        }
+        p, li, label, .stMarkdown, .stCaption {
+            font-size: 0.97rem;
+        }
         .stApp {
             background:
                 radial-gradient(1200px 600px at 8% -10%, rgba(59, 130, 246, 0.10), transparent 42%),
@@ -127,15 +132,15 @@ def _inject_app_styles() -> None:
             50% { transform: translateY(-3px); }
         }
         .app-hero h1 {
-            font-family: "Instrument Sans", "DM Sans", sans-serif;
+            font-family: "Manrope", "Inter", sans-serif;
             font-size: 1.75rem;
-            font-weight: 700;
+            font-weight: 800;
             margin: 0 0 0.4rem 0;
             line-height: 1.2;
         }
         .app-hero p {
             margin: 0;
-            opacity: 0.92;
+            opacity: 0.98;
             font-size: 1rem;
             line-height: 1.5;
             max-width: 52rem;
@@ -173,19 +178,30 @@ def _inject_app_styles() -> None:
             padding: 1.1rem 1.25rem;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
         }
-        .app-muted { color: #64748b; font-size: 0.92rem; }
+        .app-muted { color: #334155; font-size: 0.92rem; }
         .app-kicker {
             font-size: 0.72rem;
-            font-weight: 600;
+            font-weight: 700;
             letter-spacing: 0.07em;
             text-transform: uppercase;
-            color: #64748b;
+            color: #334155;
         }
         button:focus-visible {
-            outline: 2px solid #6366f1 !important;
+            outline: 3px solid #1d4ed8 !important;
             outline-offset: 2px !important;
+            box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.25);
         }
-        a:focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; }
+        a:focus-visible {
+            outline: 3px solid #1d4ed8;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        a {
+            color: #1d4ed8 !important;
+        }
+        a:hover {
+            color: #1e40af !important;
+        }
         [data-testid="stSidebar"] {
             border-right: 1px solid #e2e8f0;
             background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
@@ -209,24 +225,69 @@ def _inject_app_styles() -> None:
             background: linear-gradient(140deg, #2563eb 0%, #4338ca 100%) !important;
             box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
             transition: transform 120ms ease, box-shadow 120ms ease;
+            font-weight: 700 !important;
+            min-height: 2.6rem !important;
         }
         .stButton > button[kind="primaryFormSubmit"]:hover,
         .stButton > button[kind="primary"]:hover {
             transform: translateY(-1px);
             box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
         }
+        .stButton > button[kind="secondary"] {
+            border-radius: 12px !important;
+            border: 1px solid #94a3b8 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            font-weight: 600 !important;
+            min-height: 2.5rem !important;
+        }
         .app-onboard-shell {
             max-width: 920px;
             margin: 0 auto;
         }
         .app-onboard-lead {
-            color: #475569;
+            color: #334155;
             margin: -0.15rem 0 1rem 0;
         }
         .app-subtle-note {
-            color: #64748b;
+            color: #334155;
             font-size: 0.86rem;
             margin-top: 0.55rem;
+        }
+        .app-gen-shell {
+            border: 1px solid rgba(148, 163, 184, 0.32);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.86);
+            padding: 0.9rem 1rem 0.65rem;
+            margin: 0.45rem 0 0.8rem 0;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        }
+        .app-gen-kv {
+            color: #334155;
+            font-size: 0.92rem;
+            margin-bottom: 0.5rem;
+        }
+        .app-gen-note {
+            color: #334155;
+            font-size: 0.86rem;
+            margin: 0;
+        }
+        .resume-studio {
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
+            padding: 0.9rem 1rem 0.7rem;
+            margin: 0.3rem 0 0.7rem;
+        }
+        .resume-studio h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        .resume-studio p {
+            margin: 0;
+            color: #334155;
+            font-size: 0.9rem;
         }
         .app-inner-hero {
             background: linear-gradient(140deg, rgba(29, 78, 216, 0.10), rgba(67, 56, 202, 0.10));
@@ -237,11 +298,65 @@ def _inject_app_styles() -> None:
         }
         .app-inner-hero p {
             margin: 0.2rem 0 0 0;
-            color: #475569;
+            color: #334155;
             font-size: 0.93rem;
         }
         .app-inner-hero strong {
             color: #1e293b;
+        }
+        .app-shell {
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+            padding: 1rem 1rem 1.15rem;
+        }
+        .app-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.7rem;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 12px;
+            padding: 0.65rem 0.8rem;
+            background: linear-gradient(140deg, rgba(37, 99, 235, 0.10), rgba(67, 56, 202, 0.08));
+            margin-bottom: 0.7rem;
+        }
+        .app-topbar-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .app-topbar-sub {
+            font-size: 0.84rem;
+            color: #334155;
+        }
+        .app-chip {
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 999px;
+            padding: 0.28rem 0.6rem;
+            font-size: 0.78rem;
+            color: #3730a3;
+            background: rgba(238, 242, 255, 0.8);
+            white-space: nowrap;
+        }
+        .app-section-card {
+            border: 1px solid rgba(148, 163, 184, 0.26);
+            border-radius: 13px;
+            background: rgba(255, 255, 255, 0.88);
+            padding: 0.75rem 0.85rem 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .app-section-title {
+            margin: 0 0 0.2rem 0;
+            font-size: 0.95rem;
+            color: #0f172a;
+            font-weight: 700;
+        }
+        .app-section-sub {
+            margin: 0 0 0.45rem 0;
+            color: #334155;
+            font-size: 0.84rem;
         }
         [data-testid="stVerticalBlockBorderWrapper"] {
             border-radius: 14px !important;
@@ -272,6 +387,35 @@ def _inject_app_styles() -> None:
             color: #ffffff !important;
             border-radius: 10px !important;
         }
+        .stTextInput input,
+        .stTextArea textarea {
+            border-radius: 10px !important;
+            border: 1px solid #94a3b8 !important;
+            color: #0f172a !important;
+            background: #ffffff !important;
+        }
+        .stTextInput input::placeholder,
+        .stTextArea textarea::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
+        }
+        [data-testid="stForm"] label,
+        .stTextInput label,
+        .stTextArea label,
+        .stSelectbox label,
+        .stNumberInput label {
+            color: #1e293b !important;
+            font-weight: 600 !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .app-hero {
+                animation: none !important;
+            }
+            * {
+                scroll-behavior: auto !important;
+                transition: none !important;
+            }
+        }
         @media (max-width: 768px) {
             .block-container {
                 padding-left: 0.75rem;
@@ -290,6 +434,10 @@ def _inject_app_styles() -> None:
             .app-feature-grid {
                 grid-template-columns: 1fr;
                 gap: 0.5rem;
+            }
+            .app-topbar {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
         /* Tab strip polish */
@@ -319,19 +467,38 @@ def _render_career_copilot_panel() -> None:
     tab_r, tab_n, tab_a = st.tabs(["Resume alignment", "Recruiter outreach", "Application follow-up"])
 
     with tab_r:
+        st.markdown(
+            """
+            <div class="resume-studio">
+                <h4>Resume Alignment Studio</h4>
+                <p>Paste your full resume text (or bullets) plus a target JD. The app extracts key achievements first, then tailors them for the role.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        strength = st.select_slider(
+            "Rewrite strength",
+            options=["light", "balanced", "aggressive"],
+            value="balanced",
+            help="Light keeps your wording close. Aggressive reframes more strongly for role fit.",
+            key="resume_rewrite_strength",
+        )
         jd = st.text_area(
             "Job description",
-            value=st.session_state.session.active_job_description,
             height=160,
-            key="career_jd",
+            value=st.session_state.career_jd_draft,
+            key="career_jd_widget",
             placeholder="Paste the full job description (responsibilities, requirements, stack).",
         )
-        bullets_raw = st.text_area(
-            "Your bullets (one per line)",
-            key="resume_bullets",
-            height=160,
-            placeholder="Shipped a payments API handling $2M/day\nCut p99 latency by 35% via caching and query tuning\nMentored 2 junior engineers on code review",
+        st.session_state.career_jd_draft = jd
+        resume_raw = st.text_area(
+            "Your resume content (paste full text or bullets)",
+            value=st.session_state.resume_content_draft,
+            key="resume_content_widget",
+            height=220,
+            placeholder="Paste your experience section or full resume text here...",
         )
+        st.session_state.resume_content_draft = resume_raw
         c1, c2 = st.columns(2)
         if c1.button("Extract keywords", use_container_width=True, type="secondary"):
             st.session_state.session.active_job_description = jd
@@ -339,14 +506,23 @@ def _render_career_copilot_panel() -> None:
             st.session_state.career_jd_keywords = kws
             save_session(SESSION_FILE, st.session_state.session)
             st.rerun()
-        if c2.button("Tailor bullets to this JD", use_container_width=True, type="primary"):
-            src = [x.strip() for x in bullets_raw.splitlines() if x.strip()]
-            if not src or not jd.strip():
-                st.warning("Add both a job description and at least one bullet.")
+        if c2.button("Tailor resume highlights to this JD", use_container_width=True, type="primary"):
+            if not resume_raw.strip() or not jd.strip():
+                st.warning("Add both a job description and resume content.")
             else:
                 with st.spinner("Aligning bullets with the job description…"):
-                    tailored = tailor_resume_bullets(resume_bullets=src, job_description=jd)
+                    src = extract_resume_achievements(resume_text=resume_raw, max_points=8)
+                    tailored = tailor_resume_bullets(
+                        resume_bullets=src,
+                        job_description=jd,
+                        rewrite_strength=strength,
+                    )
+                pairs = []
+                for i, t in enumerate(tailored):
+                    original = src[i] if i < len(src) else ""
+                    pairs.append({"original": original, "tailored": t})
                 st.session_state.career_tailored_bullets = tailored
+                st.session_state.career_tailor_pairs = pairs
                 st.session_state.session.active_job_description = jd
                 save_session(SESSION_FILE, st.session_state.session)
                 st.rerun()
@@ -356,10 +532,16 @@ def _render_career_copilot_panel() -> None:
             st.caption(", ".join(st.session_state.career_jd_keywords))
 
         if st.session_state.career_tailored_bullets:
+            st.success("Tailoring complete. Review extracted source points and final tailored versions below.")
             st.markdown("**Tailored bullets**")
+            for idx, pair in enumerate(st.session_state.career_tailor_pairs or [], start=1):
+                with st.expander(f"Bullet {idx}: before → after", expanded=False):
+                    st.markdown(f"**Before:** {pair.get('original', '')}")
+                    st.markdown(f"**After:** {pair.get('tailored', '')}")
+            if not st.session_state.career_tailor_pairs:
+                for b in st.session_state.career_tailored_bullets:
+                    st.markdown(f"- {b}")
             tailored_text = "\n".join(f"• {b}" for b in st.session_state.career_tailored_bullets)
-            for b in st.session_state.career_tailored_bullets:
-                st.markdown(f"- {b}")
             st.download_button(
                 "Download as .txt",
                 data=tailored_text.encode("utf-8"),
@@ -496,6 +678,12 @@ def _ensure_state() -> None:
         st.session_state.career_jd_keywords = []
     if "career_tailored_bullets" not in st.session_state:
         st.session_state.career_tailored_bullets = []
+    if "career_tailor_pairs" not in st.session_state:
+        st.session_state.career_tailor_pairs = []
+    if "career_jd_draft" not in st.session_state:
+        st.session_state.career_jd_draft = ""
+    if "resume_content_draft" not in st.session_state:
+        st.session_state.resume_content_draft = ""
     if "career_outreach" not in st.session_state:
         st.session_state.career_outreach = None
     if "career_followup_last" not in st.session_state:
@@ -536,48 +724,30 @@ def _evaluate_round() -> None:
         q = items[i]["question"]
         ua = str(answers[i]).strip()
         ref = items[i].get("reference_answer", "")
-        if st.session_state.jury_mode:
-            strict_ev, clarity_ev, ev, jury_summary = jury_evaluator_agent(question=q, answer=ua)
-        else:
-            ev = evaluator_agent(question=q, answer=ua)
-            strict_ev = ev
-            clarity_ev = ev
-            jury_summary = "Single evaluator mode."
-        plan = plan_next(ev, st.session_state.session, default_topic=st.session_state.topic)
-        update_memory(ev, st.session_state.session, plan.focus_topic)
-        intervention = execute_plan_action(plan, st.session_state.session)
-        if st.session_state.enable_reflection:
-            pattern, style, strategy = reflection_agent(
-                topic=st.session_state.topic,
-                question=q,
-                answer=ua,
-                feedback=ev.feedback_summary,
-            )
-            st.session_state.session.preferred_question_style = style
-        else:
-            pattern, style, strategy = "Reflection disabled", st.session_state.session.preferred_question_style, ""
-
-        if st.session_state.enable_tools:
-            tool_name, tool_reason = supervisor_tool_agent(
-                topic=st.session_state.topic,
-                missed_points=ev.missed_points,
-                score=ev.overall_score,
-            )
-            tool_output = execute_supervisor_tool(
-                tool_name=tool_name,
-                session=st.session_state.session,
-                topic=st.session_state.topic,
-                missed_points=ev.missed_points,
-                question=q,
-                answer=ua,
-                interview_type=st.session_state.interview_type,
-            )
-        else:
-            tool_name, tool_reason, tool_output = "none", "Tools disabled", ""
-        if st.session_state.session.reflections:
-            st.session_state.session.reflections[-1].intervention_used = plan.action
-            st.session_state.session.reflections[-1].mistake_pattern = pattern
-            st.session_state.session.reflections[-1].recommended_style = style
+        turn = run_agentic_turn(
+            session=st.session_state.session,
+            question=q,
+            answer=ua,
+            topic=st.session_state.topic,
+            interview_type=st.session_state.interview_type,
+            jury_mode=st.session_state.jury_mode,
+            enable_reflection=st.session_state.enable_reflection,
+            enable_tools=st.session_state.enable_tools,
+            max_steps=3,
+        )
+        ev = turn["evaluation"]
+        strict_ev = turn["strict_evaluation"]
+        clarity_ev = turn["clarity_evaluation"]
+        jury_summary = turn["jury_summary"]
+        plan = turn["plan"]
+        intervention = turn["intervention"]
+        tool_name = turn["tool_name"]
+        tool_reason = turn["tool_reason"]
+        tool_output = turn["tool_output"]
+        pattern = turn["reflection_pattern"]
+        style = turn["reflection_style"]
+        strategy = turn["reflection_strategy"]
+        critic_notes = turn["critic_notes"]
 
         st.session_state.difficulty = plan.next_difficulty
         st.session_state.topic = plan.focus_topic
@@ -607,6 +777,7 @@ def _evaluate_round() -> None:
                 "reflection_pattern": pattern,
                 "reflection_style": style,
                 "reflection_strategy": strategy,
+                "critic_notes": critic_notes,
             }
         )
 
@@ -637,6 +808,9 @@ def _reset_all() -> None:
     st.session_state.enable_reflection = True
     st.session_state.career_jd_keywords = []
     st.session_state.career_tailored_bullets = []
+    st.session_state.career_tailor_pairs = []
+    st.session_state.career_jd_draft = ""
+    st.session_state.resume_content_draft = ""
     st.session_state.career_outreach = None
     st.session_state.career_followup_last = ""
     if SESSION_FILE.exists():
@@ -676,20 +850,34 @@ def _render_generation_panel() -> bool:
     n = int(st.session_state.round_size)
 
     st.markdown("### Generating interview round")
-    st.caption(
-        f"**{role}** · **{itype}** · **{topic}** · **{n}** questions · difficulty **{st.session_state.difficulty}**"
+    st.markdown(
+        f"""
+        <div class="app-gen-shell">
+            <p class="app-gen-kv"><strong>{role}</strong> · {itype} · {topic} · {n} questions · difficulty <strong>{st.session_state.difficulty}</strong></p>
+            <p class="app-gen-note">Live pipeline shown below. This mirrors the app workflow (prompt build → model call → parse/validate → ready).</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    st.caption(
-        "Tip: smaller question counts and a faster local model (or API) reduce wait time. "
-        "Evaluation is faster with **Jury** off in the sidebar."
-    )
+    with st.expander("What the app is doing right now", expanded=True):
+        st.markdown("- Stage 1: Build structured prompt from role, topic, difficulty, and count.")
+        st.markdown("- Stage 2: Request one JSON batch from the model (all questions + reference answers).")
+        st.markdown("- Stage 3: Parse JSON and validate exact item count.")
+        st.markdown("- Stage 4: If invalid, run one repair pass and re-parse.")
+        st.markdown("- Stage 5: Save round into session and render your answer fields.")
 
     ok = False
     with st.status("Calling the batch model — usually the slowest step…", expanded=True) as status:
-        status.write("One request asks for every question plus short reference answers (JSON).")
+        status.write("Stage 1/5: Preparing prompt payload")
+        status.write("Stage 2/5: Sending batch request to your model")
         prog = st.progress(0, text="Starting…")
         try:
+            prog.progress(30, text="Model request in progress…")
             _generate_round()
+            status.write("Stage 3/5: Parsing JSON output")
+            status.write("Stage 4/5: Validating output length/shape")
+            prog.progress(85, text="Validating and saving…")
+            status.write("Stage 5/5: Round saved to session")
             prog.progress(100, text="Done")
             status.update(label="Round ready", state="complete")
             ok = True
@@ -701,7 +889,7 @@ def _render_generation_panel() -> bool:
 
 def main() -> None:
     st.set_page_config(
-        page_title="Career Preparation Copilot",
+        page_title="Agentic Career Readiness Assistant",
         page_icon="🎯",
         layout="wide",
         initial_sidebar_state="collapsed",
@@ -714,7 +902,7 @@ def main() -> None:
 
     if not st.session_state.profile_complete:
         st.markdown('<div class="app-onboard-shell">', unsafe_allow_html=True)
-        st.markdown("## Agentic Career Preparation Copilot")
+        st.markdown("## Agentic Career Readiness Assistant")
         st.markdown(
             """
             <div class="app-hero" role="region" aria-label="Welcome">
@@ -736,11 +924,11 @@ def main() -> None:
             with st.container(border=True):
                 with st.form("onboarding_form"):
                     user_name = st.text_input("Your name", placeholder="e.g. Alex")
-                    role = st.text_input("Role you are interviewing for", value="Software Engineer")
+                    role = st.text_input("Role you are interviewing for", placeholder="e.g. Software Engineer")
                     submitted = st.form_submit_button("Continue", type="primary", use_container_width=True)
                 if submitted:
                     st.session_state.user_name = user_name.strip()
-                    st.session_state.session.role = role.strip() or "Software Engineer"
+                    st.session_state.session.role = role.strip() or "Candidate"
                     st.session_state.interview_type = "General"
                     st.session_state.topic = "core interview fundamentals"
                     st.session_state.profile_complete = True
@@ -822,9 +1010,23 @@ def main() -> None:
 
     items = st.session_state.round_items
     n = st.session_state.round_size
+    display_name = (st.session_state.user_name or "").strip() or "there"
 
     with st.container(border=True):
-        st.markdown("## Agentic Career Preparation Copilot")
+        st.markdown('<div class="app-shell">', unsafe_allow_html=True)
+        st.markdown(f"## Hi {display_name}, let's begin your prep")
+        st.markdown(
+            f"""
+            <div class="app-topbar">
+                <div>
+                    <div class="app-topbar-title">Agentic Career Readiness Assistant</div>
+                    <div class="app-topbar-sub">Interview practice + JD alignment + outreach in one workspace</div>
+                </div>
+                <div class="app-chip">{st.session_state.session.role}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <div class="app-inner-hero">
@@ -842,6 +1044,15 @@ def main() -> None:
 
         if workspace == "Interview practice":
             st.divider()
+            st.markdown(
+                """
+                <div class="app-section-card">
+                    <p class="app-section-title">Interview controls</p>
+                    <p class="app-section-sub">Tune question count and difficulty, then generate a fresh round.</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
             sum_l, mid_m, mid_r, btn_c = st.columns([2.0, 1.0, 1.0, 1.2], gap="small")
             with sum_l:
                 st.markdown(
@@ -892,6 +1103,15 @@ def main() -> None:
                     "Set **Questions**, then click **Generate round** above. One model call builds the full set of prompts."
                 )
             else:
+                st.markdown(
+                    """
+                    <div class="app-section-card">
+                        <p class="app-section-title">Answer workspace</p>
+                        <p class="app-section-sub">Write concise interview responses and evaluate them together at the end.</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 st.markdown('<p class="app-kicker">This round</p>', unsafe_allow_html=True)
                 st.caption(
                     f"**{n}** questions · difficulty **{st.session_state.difficulty}** · style **{st.session_state.session.preferred_question_style}**"
@@ -942,6 +1162,15 @@ def main() -> None:
 
             if st.session_state.history:
                 st.divider()
+                st.markdown(
+                    """
+                    <div class="app-section-card">
+                        <p class="app-section-title">Performance history</p>
+                        <p class="app-section-sub">Review scores, jury verdicts, and planner/tool interventions over time.</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
                 st.markdown("### History")
                 st.caption("Each entry includes scores, jury breakdown, reflection, and planner + tool output.")
 
@@ -984,10 +1213,18 @@ def main() -> None:
                             st.markdown(f"**Intervention:** {item.get('intervention', '—')}")
                             st.markdown(f"**Tool:** `{item.get('tool_name', 'none')}` — {item.get('tool_reason', '—')}")
                             st.markdown(f"**Tool output:** {item.get('tool_output', '—')}")
+                            critic_notes = item.get("critic_notes") or []
+                            if critic_notes:
+                                last_note = critic_notes[-1]
+                                st.markdown(
+                                    f"**Critic:** approved={last_note.get('approved')} · confidence={last_note.get('confidence')} · "
+                                    f"reason: {last_note.get('reason', '—')}"
+                                )
 
         else:
             st.divider()
             _render_career_copilot_panel()
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if st.session_state.last_error:
         st.error(st.session_state.last_error)
