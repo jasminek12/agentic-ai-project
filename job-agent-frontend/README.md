@@ -1,15 +1,15 @@
-# Job Agent Frontend
+# PrepMate — Frontend
 
 > **Project overview:** see the repo root [README.md](../README.md).
 
-React + Vite frontend for the FastAPI backend in `job-agent-backend`.
+**Agentic AI UI:** React + Vite SPA for the FastAPI backend—tabs for resume, adaptive interview, and outreach, plus a **goal/workflow-style dashboard** that surfaces agent progress alongside API results (`job-agent-backend`).
 
 ## Features
 
 - Welcome screen (collects name; stored in `localStorage`)
 - Resume tailoring UI: `POST /tailor-resume` — expects a **PDF** response and starts a download
 - Interview simulator: `POST /start-interview` and `POST /submit-answer` (both require **`session_id`**)
-- Professional outreach tab: **client-side** draft helper only (no backend endpoint yet)
+- Professional outreach tab: calls **`POST /frame-message`**; falls back to a **local template** if the API errors
 - Agent-style dashboard (progress, insights, goals, etc.) — mostly UI logic; core data still comes from the backend routes above
 
 ## Prerequisites

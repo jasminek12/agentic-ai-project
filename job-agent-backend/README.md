@@ -1,6 +1,8 @@
-# Job Agent Backend (FastAPI + Groq)
+# PrepMate — Backend (FastAPI + Groq)
 
 > **Project overview:** see the repo root [README.md](../README.md).
+
+**Agentic AI backend:** multiple **LLM agents** (resume, interview, outreach), **session memory** for adaptive interviews, and a **PDF toolchain**—see root README section *What makes this agentic AI?*
 
 Backend MVP for:
 
@@ -159,6 +161,42 @@ You must call `/start-interview` for that `session_id` before `/submit-answer`.
 
 ---
 
+### 4) `POST /frame-message`
+
+Generates a recruiter- or hiring-manager-ready message (email or LinkedIn style) using the **Groq** LLM.
+
+**Request** (`application/json`):
+
+```json
+{
+  "message_type": "follow_up",
+  "channel": "email",
+  "tone": "professional",
+  "sender_name": "Alex Rivera",
+  "recipient_name": "Jordan",
+  "company": "Acme Corp",
+  "role": "Backend engineer",
+  "notes": "Mutual connection with Sam."
+}
+```
+
+- `message_type`: `follow_up` | `thank_you` | `cold` | `connection` | `schedule`
+- `channel`: `email` | `linkedin`
+- `tone`: `professional` | `warm` | `concise`
+- At least one of `role`, `company`, `recipient_name`, or `notes` must be non-empty.
+
+**Response** (`application/json`):
+
+```json
+{
+  "message": "Hello Jordan,\n\n...",
+  "confidence": "high",
+  "rationale": "Matches stated role and company context."
+}
+```
+
+---
+
 ## CORS
 
 `app/main.py` enables permissive CORS (`allow_origins=["*"]`) for local development. **Tighten `allow_origins` in production** to your deployed frontend origin(s).
@@ -168,4 +206,4 @@ You must call `/start-interview` for that `session_id` before `/submit-answer`.
 - Mode is chosen by the client (`behavioral` or `technical`), not inferred by the LLM alone.
 - Interview history is persisted per `session_id` (see `app/utils/memory.py` and files under `storage/`).
 - Generated PDFs are written under `storage/outputs/` during tailoring.
-- A future enhancement could add `POST /frame-message` (or similar) so recruiter outreach drafts are produced by the same LLM stack as resume and interview flows.
+- `/frame-message` does not persist state; each call is independent.

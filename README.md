@@ -1,4 +1,6 @@
-# Agentic Interview Helper
+# PrepMate
+
+**PrepMate** is an **agentic AI** interview copilot: specialized **LLM agents** on the backend (resume, interview, outreach) plus a **goal-oriented UI** on the frontend—plans, progress, and session-aware flows—so the product behaves like an assistant working *with* you, not a single static prompt.
 
 Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM + LaTeX), run an **adaptive behavioral/technical interview** (Groq-backed Q&A with scores and follow-ups), and **professional outreach** drafts via **`POST /frame-message`** (Groq), with a **local template fallback** in the UI if the request fails.
 
@@ -16,6 +18,7 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 ## Table of contents
 
 - [Features](#features)
+- [What makes this agentic AI?](#what-makes-this-agentic-ai)
 - [Architecture](#architecture)
 - [Repository layout](#repository-layout)
 - [Prerequisites](#prerequisites)
@@ -39,11 +42,29 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | **Tailor resume** | Paste resume + JD → download tailored **PDF** | `POST /tailor-resume` |
 | **Interview simulator** | Start session → answer questions → score, feedback, next question | `POST /start-interview`, `POST /submit-answer` |
 | **Professional outreach** | Purpose, channel, tone, context → LLM draft + copy | `POST /frame-message` (fallback: browser templates) |
-| **Agent-style dashboard** | Progress, insights, goals, weak-area memory (UI), plan timelines | Mostly **frontend**; interview scores/feedback from API |
+| **Agent-style dashboard** | Progress, insights, goals, weak-area memory, plan timelines (agentic UX) | Mostly **frontend**; interview scores/feedback from API |
+
+---
+
+## What makes this agentic AI?
+
+**Agentic** here means the system is built around **autonomous-style helpers** (LLM-backed **agents**) that take structured goals, use **memory** or **tools**, and produce the next artifact—not one-off completions with no state.
+
+| Behavior | How this repo implements it |
+|----------|-------------------------------|
+| **Specialized agents** | Separate agent modules for **resume tailoring**, **interview Q&A** (generate + evaluate), and **outreach framing** (`app/agents/`). |
+| **Stateful interview loop** | Each `session_id` keeps **conversation memory**; new questions and feedback depend on prior answers and scores (`storage/` + `memory.py`). |
+| **Tool-style outcomes** | Resume path: LLM → structured content → **LaTeX / `pdflatex`** → PDF download. |
+| **Goal-oriented UI** | Welcome flow, tabs, **workflow progress**, **plan timelines**, goals/subtasks, and heuristics that mirror “what the agent is doing next” (see `job-agent-frontend/src/App.jsx`). |
+| **Grounded outreach** | `/frame-message` returns **message + confidence + rationale** so the user sees a trace of *why* the draft fits (when the API succeeds). |
+
+This is still an **MVP**: agents are orchestrated in code (not a general-purpose autonomous agent framework), but the pattern is intentionally **agentic**—plan, act, observe, repeat—especially in the interview and resume flows.
 
 ---
 
 ## Architecture
+
+The diagram shows how the **agentic backend** (multiple LLM-driven flows + memory + PDF tooling) connects to the **copilot UI**.
 
 ```mermaid
 flowchart LR
@@ -69,15 +90,15 @@ flowchart LR
 ## Repository layout
 
 ```text
-agentic-interview-helper/
+prep-mate/                    # project root (your clone folder name may differ)
 ├── README.md                 ← this file (repo home on GitHub/GitLab)
 ├── job-agent-backend/        # FastAPI + Groq + PDF pipeline
 │   ├── app/
 │   │   ├── main.py           # App, CORS, routers
 │   │   ├── config.py       # GROQ_* , paths (fails fast if GROQ_API_KEY missing)
 │   │   ├── schemas.py      # Request/response models
-│   │   ├── routes/         # resume_routes, interview_routes
-│   │   ├── agents/         # resume_agent, interview_agent
+│   │   ├── routes/         # resume, interview, outreach
+│   │   ├── agents/         # resume_agent, interview_agent, outreach_agent
 │   │   └── utils/          # llm, latex, memory
 │   ├── storage/            # memory + PDF outputs (runtime)
 │   ├── requirements.txt

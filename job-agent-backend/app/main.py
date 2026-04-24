@@ -8,8 +8,8 @@ from app.routes.resume_routes import router as resume_router
 
 
 app = FastAPI(
-    title="Agentic Interview Helper — API",
-    description="Resume tailoring (PDF), adaptive interview, and LLM outreach framing. Full setup: repository root README.md.",
+    title="PrepMate — API",
+    description="PrepMate agentic AI API: resume PDF tailoring, adaptive interview (session memory), and LLM outreach. Setup: repository root README.md.",
     version="1.0.0",
 )
 
@@ -43,7 +43,7 @@ def unhandled_exception_handler(_: Request, exc: Exception):
 
 @app.get("/")
 def healthcheck():
-    return {"status": "ok", "message": "Agentic Interview Helper backend is running."}
+    return {"status": "ok", "message": "PrepMate backend is running."}
 
 
 @app.get("/health")

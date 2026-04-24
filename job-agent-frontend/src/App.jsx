@@ -944,7 +944,7 @@ function App() {
     return (
       <div className="welcome-page">
         <section className="welcome-card">
-          <h1>Welcome to Job Agent</h1>
+          <h1>Welcome to PrepMate</h1>
           <p>Enter your name to continue to your interview prep workspace.</p>
           <form onSubmit={handleEnterApp} className="form">
             <label>
@@ -967,7 +967,7 @@ function App() {
   return (
     <div className="app">
       <header className="app__header">
-        <h1>Job Agent Frontend</h1>
+        <h1>PrepMate</h1>
         <div className="welcome-banner">
           <p className="welcome-banner__title">{friendlyGreeting}</p>
           <p className="muted">{friendlyFact}</p>
@@ -982,7 +982,7 @@ function App() {
             Change name
           </button>
         </div>
-        <p>Frontend for resume tailoring and adaptive interview practice.</p>
+        <p>Resume tailoring, adaptive interviews, and recruiter-ready outreach—in one agentic workspace.</p>
         <p className="muted">
           Backend: <code>{API_BASE_URL}</code>
         </p>
