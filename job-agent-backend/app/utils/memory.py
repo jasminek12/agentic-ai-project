@@ -1,0 +1,54 @@
+import json
+import re
+from typing import Any, Dict
+
+from app.config import STORAGE_DIR
+
+
+DEFAULT_MEMORY: Dict[str, Any] = {
+    "mode": "",
+    "job_description": "",
+    "resume": "",
+    "history": [],
+}
+
+
+def _memory_file_path(session_id: str):
+    safe_session_id = re.sub(r"[^a-zA-Z0-9_-]", "_", session_id)
+    return STORAGE_DIR / f"memory_{safe_session_id}.json"
+
+
+def load_memory(session_id: str) -> Dict[str, Any]:
+    print(f"[DEBUG] Loading interview memory for session_id={session_id}")
+    try:
+        STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        memory_file = _memory_file_path(session_id)
+        if not memory_file.exists():
+            save_memory(session_id, DEFAULT_MEMORY)
+            return dict(DEFAULT_MEMORY)
+
+        with memory_file.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+            if not isinstance(data, dict):
+                print("[DEBUG] Memory file is not a dict. Resetting.")
+                reset_memory(session_id)
+                return dict(DEFAULT_MEMORY)
+            return data
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"[DEBUG] Failed to load memory: {exc}. Resetting memory file.")
+        reset_memory(session_id)
+        return dict(DEFAULT_MEMORY)
+
+
+def save_memory(session_id: str, memory: Dict[str, Any]) -> None:
+    print(f"[DEBUG] Saving interview memory for session_id={session_id}")
+    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    memory_file = _memory_file_path(session_id)
+    with memory_file.open("w", encoding="utf-8") as file:
+        json.dump(memory, file, indent=2, ensure_ascii=False)
+
+
+def reset_memory(session_id: str) -> Dict[str, Any]:
+    print(f"[DEBUG] Resetting interview memory for session_id={session_id}")
+    save_memory(session_id, dict(DEFAULT_MEMORY))
+    return dict(DEFAULT_MEMORY)

@@ -1,0 +1,17 @@
+{
+  "mode": "technical",
+  "job_description": "Looking for a cybersecurity analyst with experience in Splunk, log analysis, and incident response.",
+  "resume": "I am a computer science student with experience in Splunk and Wireshark.",
+  "history": [
+    {
+      "question": "How would you use Splunk to analyze a large dataset of network logs to identify potential security threats, and what specific search queries or visualizations would you use to detect anomalies in the data?",
+      "answer": "I would use Splunk to monitor logs and detect anomalies using queries.",
+      "score": 2
+    },
+    {
+      "question": "Given a Splunk index containing firewall logs, write a search query to extract and display the top 5 source IP addresses that have generated the most denied traffic in the last 24 hours, and explain how you would use this information to inform incident response decisions.",
+      "answer": "",
+      "score": null
+    }
+  ]
+}

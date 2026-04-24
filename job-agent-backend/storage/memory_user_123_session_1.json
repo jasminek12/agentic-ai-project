@@ -1,0 +1,12 @@
+{
+  "mode": "behavioral",
+  "job_description": "Looking for a Python backend developer with Redis and Docker experience.",
+  "resume": "Backend Engineer with 3 years of experience...",
+  "history": [
+    {
+      "question": "Describe a situation where you had to collaborate with a team to resolve a critical issue with a Python backend application, such as a Redis connection timeout or a Docker container crash, and walk me through your process of identifying the root cause, communicating with the team, and implementing a solution.",
+      "answer": "",
+      "score": null
+    }
+  ]
+}
