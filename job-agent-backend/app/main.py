@@ -3,12 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.routes.interview_routes import router as interview_router
+from app.routes.outreach_routes import router as outreach_router
 from app.routes.resume_routes import router as resume_router
 
 
 app = FastAPI(
-    title="Job Assistant Backend API",
-    description="MVP backend for resume tailoring and adaptive interview simulation.",
+    title="Agentic Interview Helper — API",
+    description="Resume tailoring (PDF), adaptive interview, and LLM outreach framing. Full setup: repository root README.md.",
     version="1.0.0",
 )
 
@@ -24,6 +25,7 @@ app.add_middleware(
 
 app.include_router(resume_router)
 app.include_router(interview_router)
+app.include_router(outreach_router)
 
 
 @app.exception_handler(HTTPException)
@@ -41,7 +43,7 @@ def unhandled_exception_handler(_: Request, exc: Exception):
 
 @app.get("/")
 def healthcheck():
-    return {"status": "ok", "message": "Job Assistant backend is running."}
+    return {"status": "ok", "message": "Agentic Interview Helper backend is running."}
 
 
 @app.get("/health")

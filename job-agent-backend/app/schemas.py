@@ -82,6 +82,27 @@ class InterviewAnswerResponse(SubmitAnswerResponse):
     pass
 
 
+class FrameMessageRequest(BaseModel):
+    message_type: str = Field(
+        ...,
+        description="One of: follow_up, thank_you, cold, connection, schedule.",
+        example="follow_up",
+    )
+    channel: str = Field(..., description="'email' or 'linkedin'.", example="email")
+    tone: str = Field(..., description="'professional', 'warm', or 'concise'.", example="professional")
+    sender_name: str = Field(default="", description="Sign-off name.", example="Alex Rivera")
+    recipient_name: str = Field(default="", description="Optional recipient first or full name.", example="Jordan")
+    company: str = Field(default="", example="Acme Corp")
+    role: str = Field(default="", example="Software Engineer Intern")
+    notes: str = Field(default="", description="Optional bullet lines or context.", example="Referred by Sam.")
+
+
+class FrameMessageResponse(BaseModel):
+    message: str = Field(..., description="Draft the user can paste into email or LinkedIn.")
+    confidence: str = Field(default="medium", example="high")
+    rationale: str = Field(default="", example="Aligns tone and role with provided company context.")
+
+
 class ResumeExperienceItem(BaseModel):
     company: str
     points: List[str]
