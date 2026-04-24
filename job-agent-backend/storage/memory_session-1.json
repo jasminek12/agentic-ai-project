@@ -1,0 +1,27 @@
+{
+  "mode": "technical",
+  "job_description": "Backend Engineer intern",
+  "resume": "\"Looking for a Python backend developer with Redis and Docker experience.. have no experience in backend",
+  "history": [
+    {
+      "question": "Describe a situation where you had to collaborate with a team to resolve a critical issue with a backend service, such as a Redis or Docker implementation, and how you contributed to the resolution of the problem.",
+      "answer": "",
+      "score": null
+    },
+    {
+      "question": "Design a high-performance caching layer using Redis for a Python backend application, and explain how you would implement Docker to containerize and deploy the application, ensuring efficient data retrieval and minimizing latency.",
+      "answer": "",
+      "score": null
+    },
+    {
+      "question": "Given a Python backend application that uses Redis as a caching layer, design and implement a Docker containerization strategy to ensure efficient data retrieval and minimize latency, considering factors such as connection pooling, cache expiration, and container orchestration.",
+      "answer": "",
+      "score": null
+    },
+    {
+      "question": "Design a simple Python backend application using Flask that connects to a Redis database to store and retrieve user session data, and write a Dockerfile to containerize the application, ensuring that the Redis connection is properly configured and the container is optimized for production deployment.",
+      "answer": "",
+      "score": null
+    }
+  ]
+}
