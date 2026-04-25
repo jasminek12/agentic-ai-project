@@ -13,7 +13,7 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | **PDF**      | LaTeX → `pdflatex` on the server                                             |
 
 
-**Documentation:** this file is the **canonical** overview for the repo. Deeper copies also live in `[job-agent-backend/README.md](job-agent-backend/README.md)` and `[job-agent-frontend/README.md](job-agent-frontend/README.md)`.
+**Documentation:** this file provides the overview for the repo. We also have in depth copied in the sub folders in `[job-agent-backend/README.md](job-agent-backend/README.md)` and `[job-agent-frontend/README.md](job-agent-frontend/README.md)`.
 
 ---
 
