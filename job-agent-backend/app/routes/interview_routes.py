@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException, status
 
-from app.agents.interview_agent import evaluate_answer, generate_question
+from app.agents.interview_agent import (
+    build_curriculum_plan,
+    build_debrief_actions,
+    evaluate_answer,
+    generate_follow_up,
+    generate_question,
+)
 from app.schemas import (
     ErrorResponse,
     InterviewAnswerResponse,
@@ -58,9 +64,38 @@ def start_interview(payload: StartInterviewRequest):
         memory["mode"] = payload.mode
         memory["job_description"] = payload.job_description
         memory["resume"] = payload.resume
+        memory["panel_mode"] = payload.panel_mode
+        memory["pressure_round"] = payload.pressure_round
+        memory["company_context"] = payload.company_context
+        memory["role_context"] = payload.role_context
+        memory["interview_date"] = payload.interview_date or ""
+        memory["panel_personas"] = (
+            ["recruiter", "hiring_manager", "domain_expert"] if payload.panel_mode else []
+        )
+        memory["panel_turn_index"] = 0
 
-        first_question = generate_question(payload.mode, payload.job_description, payload.resume, memory["history"])
-        memory["history"].append({"question": first_question["question"], "answer": "", "score": None})
+        first_question = generate_question(
+            payload.mode,
+            payload.job_description,
+            payload.resume,
+            memory["history"],
+            panel_mode=payload.panel_mode,
+            pressure_round=payload.pressure_round,
+            company_context=payload.company_context,
+            role_context=payload.role_context,
+            panel_personas=memory.get("panel_personas", []),
+            panel_turn_index=memory.get("panel_turn_index", 0),
+        )
+        memory["history"].append(
+            {
+                "question": first_question["question"],
+                "answer": "",
+                "score": None,
+                "persona": first_question.get("persona", ""),
+                "focus_area": first_question.get("focus_area", ""),
+            }
+        )
+        memory["panel_turn_index"] = int(memory.get("panel_turn_index", 0)) + 1
         save_memory(payload.session_id, memory)
         return first_question
     except ValueError as exc:
@@ -119,24 +154,64 @@ def submit_answer(payload: SubmitAnswerRequest):
         if not current_item:
             raise HTTPException(status_code=400, detail={"error": "No pending question found."})
 
-        evaluation = evaluate_answer(current_item["question"], payload.answer)
+        evaluation = evaluate_answer(current_item["question"], payload.answer, memory.get("mode", "behavioral"))
         current_item["answer"] = payload.answer
         current_item["score"] = evaluation["score"]
+        current_item["feedback"] = evaluation["feedback"]
+        current_item["weak_topics"] = evaluation["weak_topics"]
+        current_item["critique"] = evaluation["critique"]
+        current_item["rewrite"] = evaluation["rewrite"]
+
+        weak_topic_memory = list(memory.get("weak_topic_memory", []))
+        weak_topic_memory.extend([str(t).strip() for t in evaluation["weak_topics"] if str(t).strip()])
+        weak_topic_memory = weak_topic_memory[-60:]
+        memory["weak_topic_memory"] = weak_topic_memory
+
+        follow_up_question = generate_follow_up(
+            current_item["question"],
+            payload.answer,
+            evaluation["weak_topics"],
+            pressure_round=bool(memory.get("pressure_round", False)),
+        )
 
         next_question = generate_question(
             memory["mode"],
             memory["job_description"],
             memory["resume"],
             history,
+            panel_mode=bool(memory.get("panel_mode", False)),
+            pressure_round=bool(memory.get("pressure_round", False)),
+            company_context=memory.get("company_context", ""),
+            role_context=memory.get("role_context", ""),
+            panel_personas=memory.get("panel_personas", []),
+            panel_turn_index=int(memory.get("panel_turn_index", 0)),
         )
-        history.append({"question": next_question["question"], "answer": "", "score": None})
+        history.append(
+            {
+                "question": next_question["question"],
+                "answer": "",
+                "score": None,
+                "persona": next_question.get("persona", ""),
+                "focus_area": next_question.get("focus_area", ""),
+            }
+        )
+        memory["panel_turn_index"] = int(memory.get("panel_turn_index", 0)) + 1
         memory["history"] = history
         save_memory(payload.session_id, memory)
+        debrief = build_debrief_actions(evaluation["score"], weak_topic_memory)
+        curriculum_plan = build_curriculum_plan(weak_topic_memory, memory.get("interview_date", ""))
 
         return {
             "score": evaluation["score"],
             "feedback": evaluation["feedback"],
             "next_question": next_question["question"],
+            "follow_up_question": follow_up_question,
+            "critique": evaluation["critique"],
+            "rewrite": evaluation["rewrite"],
+            "debrief_actions": debrief["actions"],
+            "next_round_target": debrief["target"],
+            "curriculum_plan": curriculum_plan,
+            "weak_topic_memory": weak_topic_memory[-8:],
         }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail={"error": str(exc)}) from exc

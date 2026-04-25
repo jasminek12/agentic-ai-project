@@ -1,5 +1,7 @@
 import json
 import re
+from collections import Counter
+from datetime import date, datetime
 from typing import Any, Dict, List
 
 from app.utils.llm import call_llm
@@ -16,26 +18,56 @@ def _extract_json_object(text: str) -> Dict[str, Any]:
 
 
 def next_question_logic(history: List[Dict[str, Any]]) -> str:
-    """Return desired difficulty based on latest score."""
+    """Return desired difficulty based on last 3 scored answers."""
     if not history:
         return "medium"
 
-    last_scored = next((item for item in reversed(history) if isinstance(item.get("score"), int)), None)
-    if not last_scored:
+    scored = [item.get("score") for item in history if isinstance(item.get("score"), int)]
+    recent = scored[-3:]
+    if not recent:
         return "medium"
 
-    score = last_scored["score"]
-    if score < 5:
+    avg_score = sum(recent) / len(recent)
+    if avg_score < 5:
         return "easy"
-    if 5 <= score <= 7:
+    if 5 <= avg_score <= 7.5:
         return "medium"
     return "hard"
 
 
-def generate_question(mode: str, job_description: str, resume: str, history: List[Dict[str, Any]]) -> Dict[str, str]:
+def _get_recent_weak_topics(history: List[Dict[str, Any]]) -> List[str]:
+    all_topics: List[str] = []
+    for item in history[-8:]:
+        topics = item.get("weak_topics", [])
+        if isinstance(topics, list):
+            all_topics.extend([str(topic).strip() for topic in topics if str(topic).strip()])
+    return [topic for topic, _ in Counter(all_topics).most_common(4)]
+
+
+def _next_panel_persona(panel_personas: List[str], turn_index: int) -> str:
+    if not panel_personas:
+        return "interviewer"
+    return panel_personas[turn_index % len(panel_personas)]
+
+
+def generate_question(
+    mode: str,
+    job_description: str,
+    resume: str,
+    history: List[Dict[str, Any]],
+    panel_mode: bool = False,
+    pressure_round: bool = False,
+    company_context: str = "",
+    role_context: str = "",
+    panel_personas: List[str] | None = None,
+    panel_turn_index: int = 0,
+) -> Dict[str, str]:
     print(f"[DEBUG] Generating interview question for mode={mode}")
     difficulty = next_question_logic(history)
     recent_history = history[-5:] if history else []
+    weak_topics = _get_recent_weak_topics(history)
+    persona = _next_panel_persona(panel_personas or [], panel_turn_index)
+    style = "challenging and probing" if pressure_round else "supportive and structured"
 
     if mode == "behavioral":
         mode_instructions = (
@@ -59,10 +91,21 @@ Instructions:
 - {mode_instructions}
 - Ask exactly one question.
 - Adapt to candidate performance based on prior scores.
+- Keep style {style}.
+- If panel mode is true, ask in the voice of persona: "{persona}".
+- If weak topics exist, target one of them with a tailored drill.
 - Return STRICT JSON only:
   {{
-    "question": "..."
+    "question": "...",
+    "focus_area": "..."
   }}
+
+Panel Mode: {panel_mode}
+Pressure Round: {pressure_round}
+Persona: {persona}
+Company Context: {company_context}
+Role Context: {role_context}
+Recent Weak Topics: {json.dumps(weak_topics, ensure_ascii=False)}
 
 Job Description:
 {job_description}
@@ -77,24 +120,31 @@ Recent History:
     response = call_llm(prompt)
     parsed = _extract_json_object(response)
     question = parsed.get("question", "").strip()
+    focus_area = str(parsed.get("focus_area", "")).strip()
     if not question:
         raise ValueError("Generated question is empty.")
-    return {"question": question}
+    return {"question": question, "focus_area": focus_area, "persona": persona}
 
 
-def evaluate_answer(question: str, answer: str) -> Dict[str, Any]:
+def evaluate_answer(question: str, answer: str, mode: str = "behavioral") -> Dict[str, Any]:
     print("[DEBUG] Evaluating interview answer")
     prompt = f"""
 You are an interview evaluator.
 Score the answer from 0 to 10 and provide constructive feedback.
 Identify weak topics.
+Also provide a concise critique and a stronger rewrite in the candidate's voice.
 
 Return STRICT JSON only:
 {{
   "score": 0,
   "feedback": "...",
-  "weak_topics": ["...", "..."]
+  "weak_topics": ["...", "..."],
+  "critique": "...",
+  "rewrite": "..."
 }}
+
+Mode:
+{mode}
 
 Question:
 {question}
@@ -109,6 +159,8 @@ Answer:
     score = parsed.get("score")
     feedback = str(parsed.get("feedback", "")).strip()
     weak_topics = parsed.get("weak_topics", [])
+    critique = str(parsed.get("critique", "")).strip()
+    rewrite = str(parsed.get("rewrite", "")).strip()
 
     if not isinstance(score, int):
         raise ValueError("LLM returned non-integer score.")
@@ -118,5 +170,77 @@ Answer:
         raise ValueError("LLM returned empty feedback.")
     if not isinstance(weak_topics, list):
         weak_topics = []
+    if not critique:
+        critique = "The answer addresses the prompt but needs tighter structure, evidence, and explicit impact."
+    if not rewrite:
+        rewrite = answer.strip()
 
-    return {"score": score, "feedback": feedback, "weak_topics": weak_topics}
+    return {
+        "score": score,
+        "feedback": feedback,
+        "weak_topics": weak_topics,
+        "critique": critique,
+        "rewrite": rewrite,
+    }
+
+
+def generate_follow_up(question: str, answer: str, weak_topics: List[str], pressure_round: bool = False) -> str:
+    prompt = f"""
+Generate one natural interviewer follow-up question based on the latest answer.
+If pressure round is enabled, make it more challenging.
+Target measurable impact, trade-offs, or clarity gaps.
+
+Return STRICT JSON only:
+{{
+  "follow_up_question": "..."
+}}
+
+Pressure Round: {pressure_round}
+Original Question: {question}
+Candidate Answer: {answer}
+Weak Topics: {json.dumps(weak_topics, ensure_ascii=False)}
+""".strip()
+    response = call_llm(prompt)
+    parsed = _extract_json_object(response)
+    return str(parsed.get("follow_up_question", "")).strip()
+
+
+def build_debrief_actions(score: int, weak_topics: List[str]) -> Dict[str, Any]:
+    prioritized = [topic for topic, _ in Counter(weak_topics).most_common(3)]
+    while len(prioritized) < 3:
+        fallback = ["quantification", "depth", "clarity"][len(prioritized)]
+        if fallback not in prioritized:
+            prioritized.append(fallback)
+
+    actions = [
+        f"Practice one answer focused on {prioritized[0]} and include a concrete metric.",
+        f"Record and revise one answer focused on {prioritized[1]} using a clear STAR flow.",
+        f"Run a timed drill targeting {prioritized[2]} in under 90 seconds with explicit outcomes.",
+    ]
+    next_target = (
+        "Reach 8/10+ on the next answer with one metric, one trade-off, and a concise closing result."
+        if score < 8
+        else "Sustain 8/10+ while improving precision and adding clearer leadership signals."
+    )
+    return {"actions": actions, "target": next_target}
+
+
+def build_curriculum_plan(weak_topic_memory: List[str], interview_date: str = "") -> List[str]:
+    top_topics = [topic for topic, _ in Counter(weak_topic_memory).most_common(3)]
+    if not top_topics:
+        top_topics = ["quantification", "clarity", "trade-offs"]
+
+    days = 7
+    if interview_date:
+        try:
+            target = datetime.strptime(interview_date, "%Y-%m-%d").date()
+            days_until = max(1, (target - date.today()).days)
+            days = min(7, days_until)
+        except ValueError:
+            days = 7
+
+    plan: List[str] = []
+    for day_idx in range(days):
+        topic = top_topics[day_idx % len(top_topics)]
+        plan.append(f"Day {day_idx + 1}: 30-45 min focused drill on {topic} plus one timed mock answer.")
+    return plan

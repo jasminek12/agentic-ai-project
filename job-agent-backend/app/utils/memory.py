@@ -9,6 +9,14 @@ DEFAULT_MEMORY: Dict[str, Any] = {
     "mode": "",
     "job_description": "",
     "resume": "",
+    "panel_mode": False,
+    "pressure_round": False,
+    "company_context": "",
+    "role_context": "",
+    "interview_date": "",
+    "panel_personas": [],
+    "panel_turn_index": 0,
+    "weak_topic_memory": [],
     "history": [],
 }
 

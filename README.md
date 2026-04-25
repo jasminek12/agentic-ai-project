@@ -43,7 +43,7 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
 | **Welcome**               | Collects display name; optional `localStorage`                           | Frontend only                                           |
 | **Tailor resume**         | Paste resume + JD → download tailored **PDF**                            | `POST /tailor-resume`                                   |
-| **Interview simulator**   | Start session → answer questions → score, feedback, next question        | `POST /start-interview`, `POST /submit-answer`          |
+| **Interview simulator**   | Adaptive Q&A with optional panel mode, pressure rounds, critique + rewrite, debrief actions, and weak-spot curriculum | `POST /start-interview`, `POST /submit-answer`          |
 | **Professional outreach** | Purpose, channel, tone, context → LLM draft + copy                       | `POST /frame-message` (fallback: browser templates)     |
 | **Agent-style dashboard** | Progress, insights, goals, weak-area memory, plan timelines (agentic UX) | Mostly **frontend**; interview scores/feedback from API |
 
@@ -59,6 +59,7 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Specialized agents**      | Separate agent modules for **resume tailoring**, **interview Q&A** (generate + evaluate), and **outreach framing** (`app/agents/`).                                              |
 | **Stateful interview loop** | Each `session_id` keeps **conversation memory**; new questions and feedback depend on prior answers and scores (`storage/` + `memory.py`).                                       |
+| **Adaptive coaching**       | Difficulty and follow-up style adapt to recent answers, weak topics, optional panel personas, and optional pressure simulation.                                                    |
 | **Tool-style outcomes**     | Resume path: LLM → structured content → **LaTeX / `pdflatex`** → PDF download.                                                                                                   |
 | **Goal-oriented UI**        | Welcome flow, tabs, **workflow progress**, **plan timelines**, goals/subtasks, and heuristics that mirror “what the agent is doing next” (see `job-agent-frontend/src/App.jsx`). |
 | **Grounded outreach**       | `/frame-message` returns **message + confidence + rationale** so the user sees a trace of *why* the draft fits (when the API succeeds).                                          |
@@ -196,7 +197,7 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
 
 |             |                                                                                                                   |
 | ----------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Body**    | JSON: `{ "mode": "behavioral" | "technical", "session_id": string, "job_description": string, "resume": string }` |
+| **Body**    | JSON: `{ "mode": "behavioral" | "technical", "session_id": string, "job_description": string, "resume": string, "panel_mode"?: bool, "pressure_round"?: bool, "company_context"?: string, "role_context"?: string, "interview_date"?: "YYYY-MM-DD" }` |
 | **Success** | JSON: `{ "question": string }`                                                                                    |
 | **Notes**   | Resets server-side memory for that `session_id` and generates the first question.                                 |
 
@@ -218,7 +219,7 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
 |             |                                                                          |
 | ----------- | ------------------------------------------------------------------------ |
 | **Body**    | JSON: `{ "session_id": string, "answer": string }`                       |
-| **Success** | JSON: `{ "score": number, "feedback": string, "next_question": string }` |
+| **Success** | JSON includes score/feedback/next question plus `follow_up_question`, `critique`, `rewrite`, `debrief_actions`, `next_round_target`, and `curriculum_plan`. |
 | **Notes**   | Call `/start-interview` for that `session_id` first.                     |
 
 

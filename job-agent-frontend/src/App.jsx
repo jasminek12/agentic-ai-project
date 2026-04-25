@@ -175,7 +175,7 @@ function buildOutreachMessage({
   const roleLine = roleForBody ? `the ${roleForBody} role` : 'the opportunity'
   const sender = senderName.trim() ? toTitleCase(senderName.trim()) : 'Your name'
 
-  let core = ''
+  let core
   switch (messageType) {
     case 'follow_up':
       core = `I am writing to follow up on my application for ${roleLine}${company.trim() ? ` at ${companyLine}` : ''}. I remain very interested and would welcome any update when convenient.`
@@ -244,10 +244,21 @@ function App() {
   const [sessionId, setSessionId] = useState(getInitialSessionId)
   const [interviewJobDescription, setInterviewJobDescription] = useState('')
   const [interviewResume, setInterviewResume] = useState('')
+  const [panelModeEnabled, setPanelModeEnabled] = useState(false)
+  const [pressureRoundEnabled, setPressureRoundEnabled] = useState(false)
+  const [companyContext, setCompanyContext] = useState('')
+  const [roleContext, setRoleContext] = useState('')
+  const [interviewDate, setInterviewDate] = useState('')
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [currentAnswer, setCurrentAnswer] = useState('')
   const [lastScore, setLastScore] = useState(null)
   const [lastFeedback, setLastFeedback] = useState('')
+  const [latestFollowUpQuestion, setLatestFollowUpQuestion] = useState('')
+  const [latestCritique, setLatestCritique] = useState('')
+  const [latestRewrite, setLatestRewrite] = useState('')
+  const [debriefActions, setDebriefActions] = useState([])
+  const [nextRoundTarget, setNextRoundTarget] = useState('')
+  const [curriculumPlan, setCurriculumPlan] = useState([])
   const [answerHistory, setAnswerHistory] = useState([])
   const [interviewError, setInterviewError] = useState('')
   const [isStartingInterview, setIsStartingInterview] = useState(false)
@@ -316,6 +327,21 @@ function App() {
       if (typeof iv.interviewResume === 'string') {
         setInterviewResume(iv.interviewResume)
       }
+      if (typeof iv.panelModeEnabled === 'boolean') {
+        setPanelModeEnabled(iv.panelModeEnabled)
+      }
+      if (typeof iv.pressureRoundEnabled === 'boolean') {
+        setPressureRoundEnabled(iv.pressureRoundEnabled)
+      }
+      if (typeof iv.companyContext === 'string') {
+        setCompanyContext(iv.companyContext)
+      }
+      if (typeof iv.roleContext === 'string') {
+        setRoleContext(iv.roleContext)
+      }
+      if (typeof iv.interviewDate === 'string') {
+        setInterviewDate(iv.interviewDate)
+      }
       if (typeof iv.goalInput === 'string') {
         setGoalInput(iv.goalInput)
       }
@@ -339,6 +365,24 @@ function App() {
       }
       if (typeof iv.lastFeedback === 'string') {
         setLastFeedback(iv.lastFeedback)
+      }
+      if (typeof iv.latestFollowUpQuestion === 'string') {
+        setLatestFollowUpQuestion(iv.latestFollowUpQuestion)
+      }
+      if (typeof iv.latestCritique === 'string') {
+        setLatestCritique(iv.latestCritique)
+      }
+      if (typeof iv.latestRewrite === 'string') {
+        setLatestRewrite(iv.latestRewrite)
+      }
+      if (Array.isArray(iv.debriefActions)) {
+        setDebriefActions(iv.debriefActions.slice(0, 3))
+      }
+      if (typeof iv.nextRoundTarget === 'string') {
+        setNextRoundTarget(iv.nextRoundTarget)
+      }
+      if (Array.isArray(iv.curriculumPlan)) {
+        setCurriculumPlan(iv.curriculumPlan.slice(0, 7))
       }
     }
     if (d.outreach) {
@@ -383,6 +427,7 @@ function App() {
   useEffect(() => {
     const savedName = window.localStorage.getItem('aih-user-name')?.trim() || ''
     if (savedName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setNameFormValue(savedName)
       setUserName(savedName)
       setHasEnteredName(true)
@@ -454,6 +499,7 @@ function App() {
   useEffect(() => {
     let alive = true
     const ac = new AbortController()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setApiHealth('checking')
     fetch(`${API_BASE_URL}/health`, { signal: ac.signal })
       .then((r) => {
@@ -490,6 +536,11 @@ function App() {
           sessionId,
           interviewJobDescription,
           interviewResume,
+          panelModeEnabled,
+          pressureRoundEnabled,
+          companyContext,
+          roleContext,
+          interviewDate,
           goalInput,
           agentGoal,
           goalSubtasks,
@@ -498,6 +549,12 @@ function App() {
           answerHistory: answerHistory.slice(0, 8),
           lastScore,
           lastFeedback,
+          latestFollowUpQuestion,
+          latestCritique,
+          latestRewrite,
+          debriefActions: debriefActions.slice(0, 3),
+          nextRoundTarget,
+          curriculumPlan: curriculumPlan.slice(0, 7),
         },
         outreach: {
           outreachMessageType,
@@ -528,6 +585,11 @@ function App() {
     sessionId,
     interviewJobDescription,
     interviewResume,
+    panelModeEnabled,
+    pressureRoundEnabled,
+    companyContext,
+    roleContext,
+    interviewDate,
     goalInput,
     agentGoal,
     goalSubtasks,
@@ -536,6 +598,12 @@ function App() {
     answerHistory,
     lastScore,
     lastFeedback,
+    latestFollowUpQuestion,
+    latestCritique,
+    latestRewrite,
+    debriefActions,
+    nextRoundTarget,
+    curriculumPlan,
     outreachMessageType,
     outreachChannel,
     outreachTone,
@@ -986,6 +1054,12 @@ function App() {
     setCurrentQuestion('')
     setCurrentAnswer('')
     setAnswerHistory([])
+    setLatestFollowUpQuestion('')
+    setLatestCritique('')
+    setLatestRewrite('')
+    setDebriefActions([])
+    setNextRoundTarget('')
+    setCurriculumPlan([])
     const id = createSessionId()
     setSessionId(id)
     try {
@@ -1183,6 +1257,12 @@ function App() {
     setLastFeedback('')
     setCurrentQuestion('')
     setCurrentAnswer('')
+    setLatestFollowUpQuestion('')
+    setLatestCritique('')
+    setLatestRewrite('')
+    setDebriefActions([])
+    setNextRoundTarget('')
+    setCurriculumPlan([])
 
     if (!interviewJobDescription.trim() || !interviewResume.trim() || !sessionId.trim()) {
       setInterviewError('Mode, session ID, job description, and resume are required.')
@@ -1199,6 +1279,11 @@ function App() {
           session_id: sessionId,
           job_description: interviewJobDescription,
           resume: interviewResume,
+          panel_mode: panelModeEnabled,
+          pressure_round: pressureRoundEnabled,
+          company_context: companyContext,
+          role_context: roleContext,
+          interview_date: interviewDate || null,
         }),
       })
 
@@ -1244,6 +1329,12 @@ function App() {
       const data = await response.json()
       setLastScore(data.score ?? null)
       setLastFeedback(data.feedback ?? '')
+      setLatestFollowUpQuestion(data.follow_up_question ?? '')
+      setLatestCritique(data.critique ?? '')
+      setLatestRewrite(data.rewrite ?? '')
+      setDebriefActions(Array.isArray(data.debrief_actions) ? data.debrief_actions.slice(0, 3) : [])
+      setNextRoundTarget(data.next_round_target ?? '')
+      setCurriculumPlan(Array.isArray(data.curriculum_plan) ? data.curriculum_plan.slice(0, 7) : [])
       const detectedWeakAreas = computeWeakAreas(currentAnswer, data.feedback ?? '', data.score ?? null)
       setWeakAreasMemory((prev) => [...detectedWeakAreas, ...prev].slice(0, 40))
       setAnswerHistory((prev) => [
@@ -1595,10 +1686,56 @@ function App() {
                 </button>
               </div>
             </div>
+            <div className="row">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={panelModeEnabled}
+                  onChange={(event) => setPanelModeEnabled(event.target.checked)}
+                />{' '}
+                Enable panel simulation mode
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={pressureRoundEnabled}
+                  onChange={(event) => setPressureRoundEnabled(event.target.checked)}
+                />{' '}
+                Enable pressure round style
+              </label>
+            </div>
             <p className="field-hint field-hint--block">
               Same ID keeps the backend interview memory. Use a new one to start a fresh run (clears the current
               question and your saved answers in this view).
             </p>
+            <div className="row">
+              <label>
+                Company Context (optional)
+                <input
+                  type="text"
+                  value={companyContext}
+                  onChange={(event) => setCompanyContext(event.target.value)}
+                  placeholder="e.g. B2B SaaS, strict SLAs, distributed team"
+                />
+              </label>
+              <label>
+                Role Context (optional)
+                <input
+                  type="text"
+                  value={roleContext}
+                  onChange={(event) => setRoleContext(event.target.value)}
+                  placeholder="e.g. Senior backend, platform reliability"
+                />
+              </label>
+            </div>
+            <label>
+              Interview Date (optional, for adaptive curriculum)
+              <input
+                type="date"
+                value={interviewDate}
+                onChange={(event) => setInterviewDate(event.target.value)}
+              />
+            </label>
 
             <label>
               Job Description
@@ -1678,6 +1815,24 @@ function App() {
                 <p className="message message--info">Score: {lastScore} / 10</p>
               ) : null}
               {lastFeedback ? <p className="message message--success">{lastFeedback}</p> : null}
+              {latestFollowUpQuestion ? (
+                <p className="message message--info">
+                  <strong>Real-time follow-up:</strong> {latestFollowUpQuestion}
+                </p>
+              ) : null}
+              {latestCritique ? (
+                <p className="message message--info">
+                  <strong>Critique:</strong> {latestCritique}
+                </p>
+              ) : null}
+              {latestRewrite ? (
+                <div className="message message--success">
+                  <p>
+                    <strong>Suggested rewrite:</strong>
+                  </p>
+                  <p>{latestRewrite}</p>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -1705,6 +1860,33 @@ function App() {
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+          {debriefActions.length > 0 || nextRoundTarget || curriculumPlan.length > 0 ? (
+            <div className="question-card">
+              <h3>Debrief + Action Tracker</h3>
+              {debriefActions.length > 0 ? (
+                <ul className="history-list">
+                  {debriefActions.map((action) => (
+                    <li key={action}>{action}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {nextRoundTarget ? (
+                <p className="message message--info">
+                  <strong>Next round target:</strong> {nextRoundTarget}
+                </p>
+              ) : null}
+              {curriculumPlan.length > 0 ? (
+                <>
+                  <h4>Weak-Spot Curriculum</h4>
+                  <ul className="history-list">
+                    {curriculumPlan.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
             </div>
           ) : null}
 

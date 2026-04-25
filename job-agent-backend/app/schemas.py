@@ -49,6 +49,31 @@ class StartInterviewRequest(BaseModel):
         description="Unique interview session identifier for multi-user memory isolation.",
         example="user_123_session_1",
     )
+    panel_mode: bool = Field(
+        default=False,
+        description="Enable multi-persona panel simulation.",
+        example=True,
+    )
+    pressure_round: bool = Field(
+        default=False,
+        description="Enable tougher follow-up style that challenges assumptions.",
+        example=False,
+    )
+    company_context: str = Field(
+        default="",
+        description="Optional company context to tailor interview themes.",
+        example="Series B fintech focused on compliance-heavy payment rails.",
+    )
+    role_context: str = Field(
+        default="",
+        description="Optional role context such as level/team expectations.",
+        example="Backend Engineer II for platform reliability.",
+    )
+    interview_date: Optional[str] = Field(
+        default=None,
+        description="Optional interview date in YYYY-MM-DD format for curriculum planning.",
+        example="2026-05-02",
+    )
 
 
 class StartInterviewResponse(BaseModel):
@@ -76,6 +101,38 @@ class SubmitAnswerResponse(BaseModel):
     score: int = Field(..., ge=0, le=10, example=7)
     feedback: str = Field(..., example="Good structure, but add measurable impact.")
     next_question: str = Field(..., example="How did you prioritize tasks under tight deadlines?")
+    follow_up_question: str = Field(
+        default="",
+        description="Targeted follow-up generated from the latest answer.",
+        example="What metric did you track to validate the improvement?",
+    )
+    critique: str = Field(
+        default="",
+        description="Short rubric-based critique of the latest answer.",
+        example="Clear structure and context, but impact and trade-offs were underdeveloped.",
+    )
+    rewrite: str = Field(
+        default="",
+        description="Suggested improved answer draft in the candidate's style.",
+        example="In this project, I inherited an API with 1.8s latency...",
+    )
+    debrief_actions: List[str] = Field(
+        default_factory=list,
+        description="Three concrete action items for the next practice step.",
+    )
+    next_round_target: str = Field(
+        default="",
+        description="Measurable target for the next round.",
+        example="Score at least 8/10 while using one metric and one trade-off statement.",
+    )
+    curriculum_plan: List[str] = Field(
+        default_factory=list,
+        description="Short day-by-day plan derived from persistent weak areas.",
+    )
+    weak_topic_memory: List[str] = Field(
+        default_factory=list,
+        description="Top weak topics remembered across this session.",
+    )
 
 
 class InterviewAnswerResponse(SubmitAnswerResponse):
@@ -124,4 +181,12 @@ class InterviewMemory(BaseModel):
     mode: str = ""
     job_description: str = ""
     resume: str = ""
+    panel_mode: bool = False
+    pressure_round: bool = False
+    company_context: str = ""
+    role_context: str = ""
+    interview_date: str = ""
+    panel_personas: List[str] = Field(default_factory=list)
+    panel_turn_index: int = 0
+    weak_topic_memory: List[str] = Field(default_factory=list)
     history: List[InterviewHistoryItem] = Field(default_factory=list)
