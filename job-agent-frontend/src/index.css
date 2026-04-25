@@ -1,12 +1,48 @@
-body {
-  margin: 0;
-  font-family: Inter, Segoe UI, Arial, sans-serif;
-  background: #f3f4f6;
-  color: #111827;
+/* Agentic Interview Helper — global surface & typography */
+:root {
+  --pm-navy: #0a2540;
+  --pm-navy-mid: #123a5c;
+  --pm-slate: #3d4f66;
+  --pm-muted: #5c6d80;
+  --pm-border: rgba(10, 37, 64, 0.09);
+  --pm-border-strong: rgba(10, 37, 64, 0.14);
+  --pm-bg: #eef2f7;
+  --pm-bg-warm: #e8ecf2;
+  --pm-surface: #ffffff;
+  --pm-surface-soft: #f7f9fc;
+  --pm-accent: #0d6efd;
+  --pm-accent-soft: rgba(13, 110, 253, 0.1);
+  --pm-accent-dark: #0b5ed7;
+  --pm-success: #0d7a52;
+  --pm-success-bg: #e8f5ef;
+  --pm-error: #b42318;
+  --pm-error-bg: #fef3f2;
+  --pm-info: #0b4f8c;
+  --pm-info-bg: #e8f1fc;
+  --pm-radius: 14px;
+  --pm-radius-sm: 10px;
+  --pm-radius-pill: 999px;
+  --pm-shadow: 0 8px 32px rgba(10, 37, 64, 0.08);
+  --pm-shadow-sm: 0 2px 12px rgba(10, 37, 64, 0.06);
+  --pm-font: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--pm-font);
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--pm-navy);
+  /* Neutral canvas; welcome page brings its own hero gradient */
+  background: #e4e9f0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 p {
@@ -17,6 +53,9 @@ h1,
 h2,
 h3 {
   margin: 0 0 0.4rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--pm-navy);
 }
 
 #root {

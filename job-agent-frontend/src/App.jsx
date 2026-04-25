@@ -1,8 +1,39 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() || 'http://127.0.0.1:8000'
+
+const DRAFT_KEY = 'aih-workspace-draft'
+const SESSION_ID_KEY = 'aih-session-id'
+
+function isValidTab(tab) {
+  return tab === 'resume' || tab === 'interview' || tab === 'outreach'
+}
+
+function createSessionId() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `session-${crypto.randomUUID()}`
+  }
+  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+}
+
+function getInitialSessionId() {
+  if (typeof window === 'undefined') {
+    return 'session-1'
+  }
+  try {
+    const existing = window.localStorage.getItem(SESSION_ID_KEY)?.trim()
+    if (existing) {
+      return existing
+    }
+    const id = createSessionId()
+    window.localStorage.setItem(SESSION_ID_KEY, id)
+    return id
+  } catch {
+    return createSessionId()
+  }
+}
 
 async function readErrorMessage(response, fallback) {
   try {
@@ -210,7 +241,7 @@ function App() {
   const [resumeDiffPreview, setResumeDiffPreview] = useState([])
 
   const [mode, setMode] = useState('behavioral')
-  const [sessionId, setSessionId] = useState('session-1')
+  const [sessionId, setSessionId] = useState(getInitialSessionId)
   const [interviewJobDescription, setInterviewJobDescription] = useState('')
   const [interviewResume, setInterviewResume] = useState('')
   const [currentQuestion, setCurrentQuestion] = useState('')
@@ -239,11 +270,130 @@ function App() {
   const [outreachError, setOutreachError] = useState('')
   const [isFramingOutreach, setIsFramingOutreach] = useState(false)
   const [outreachLlmMeta, setOutreachLlmMeta] = useState(null)
+  const [apiHealth, setApiHealth] = useState('checking')
+
+  const applyWorkspaceDraft = useCallback((d) => {
+    if (!d || d.v !== 1) {
+      return
+    }
+    if (d.activeTab && isValidTab(d.activeTab)) {
+      setActiveTab(d.activeTab)
+    }
+    if (d.resume) {
+      if (typeof d.resume.resumeText === 'string') {
+        setResumeText(d.resume.resumeText)
+      }
+      if (typeof d.resume.jobDescription === 'string') {
+        setJobDescription(d.resume.jobDescription)
+      }
+      if (
+        d.resume.planPhase === 'idle' ||
+        d.resume.planPhase === 'extract' ||
+        d.resume.planPhase === 'rewrite' ||
+        d.resume.planPhase === 'quantify' ||
+        d.resume.planPhase === 'export' ||
+        d.resume.planPhase === 'done'
+      ) {
+        setPlanPhase(d.resume.planPhase)
+      }
+    }
+    if (d.interview) {
+      const iv = d.interview
+      if (iv.mode === 'behavioral' || iv.mode === 'technical') {
+        setMode(iv.mode)
+      }
+      if (typeof iv.sessionId === 'string' && iv.sessionId.trim()) {
+        setSessionId(iv.sessionId.trim())
+        try {
+          window.localStorage.setItem(SESSION_ID_KEY, iv.sessionId.trim())
+        } catch {
+          // Ignore.
+        }
+      }
+      if (typeof iv.interviewJobDescription === 'string') {
+        setInterviewJobDescription(iv.interviewJobDescription)
+      }
+      if (typeof iv.interviewResume === 'string') {
+        setInterviewResume(iv.interviewResume)
+      }
+      if (typeof iv.goalInput === 'string') {
+        setGoalInput(iv.goalInput)
+      }
+      if (typeof iv.agentGoal === 'string') {
+        setAgentGoal(iv.agentGoal)
+      }
+      if (Array.isArray(iv.goalSubtasks)) {
+        setGoalSubtasks(iv.goalSubtasks)
+      }
+      if (typeof iv.currentQuestion === 'string') {
+        setCurrentQuestion(iv.currentQuestion)
+      }
+      if (typeof iv.currentAnswer === 'string') {
+        setCurrentAnswer(iv.currentAnswer)
+      }
+      if (Array.isArray(iv.answerHistory)) {
+        setAnswerHistory(iv.answerHistory.slice(0, 8))
+      }
+      if (iv.lastScore === null || (typeof iv.lastScore === 'number' && !Number.isNaN(iv.lastScore))) {
+        setLastScore(iv.lastScore)
+      }
+      if (typeof iv.lastFeedback === 'string') {
+        setLastFeedback(iv.lastFeedback)
+      }
+    }
+    if (d.outreach) {
+      const o = d.outreach
+      if (['follow_up', 'thank_you', 'cold', 'connection', 'schedule'].includes(o.outreachMessageType)) {
+        setOutreachMessageType(o.outreachMessageType)
+      }
+      if (o.outreachChannel === 'email' || o.outreachChannel === 'linkedin') {
+        setOutreachChannel(o.outreachChannel)
+      }
+      if (o.outreachTone === 'professional' || o.outreachTone === 'warm' || o.outreachTone === 'concise') {
+        setOutreachTone(o.outreachTone)
+      }
+      if (typeof o.outreachRecipientName === 'string') {
+        setOutreachRecipientName(o.outreachRecipientName)
+      }
+      if (typeof o.outreachCompany === 'string') {
+        setOutreachCompany(o.outreachCompany)
+      }
+      if (typeof o.outreachRole === 'string') {
+        setOutreachRole(o.outreachRole)
+      }
+      if (typeof o.outreachNotes === 'string') {
+        setOutreachNotes(o.outreachNotes)
+      }
+      if (typeof o.framedMessage === 'string') {
+        setFramedMessage(o.framedMessage)
+      }
+      if (
+        o.outreachLlmMeta &&
+        typeof o.outreachLlmMeta === 'object' &&
+        typeof o.outreachLlmMeta.confidence === 'string'
+      ) {
+        setOutreachLlmMeta({
+          confidence: o.outreachLlmMeta.confidence,
+          rationale: typeof o.outreachLlmMeta.rationale === 'string' ? o.outreachLlmMeta.rationale : '',
+        })
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const savedName = window.localStorage.getItem('aih-user-name')?.trim() || ''
     if (savedName) {
       setNameFormValue(savedName)
+      setUserName(savedName)
+      setHasEnteredName(true)
+      try {
+        const raw = window.localStorage.getItem(DRAFT_KEY)
+        if (raw) {
+          applyWorkspaceDraft(JSON.parse(raw))
+        }
+      } catch {
+        // Ignore malformed local storage.
+      }
     }
 
     const savedWeakAreas = window.localStorage.getItem('aih-weak-areas')
@@ -257,7 +407,145 @@ function App() {
         // Ignore malformed local storage values.
       }
     }
+
+    const h = (window.location.hash || '').replace(/^#/, '')
+    if (isValidTab(h)) {
+      setActiveTab(h)
+    }
+  }, [applyWorkspaceDraft])
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const h = (window.location.hash || '').replace(/^#/, '')
+      if (isValidTab(h)) {
+        setActiveTab(h)
+      }
+    }
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  useEffect(() => {
+    if (!hasEnteredName) {
+      return
+    }
+    if (!isValidTab(activeTab)) {
+      return
+    }
+    const next = `#${activeTab}`
+    if (window.location.hash !== next) {
+      window.history.replaceState(null, '', next)
+    }
+  }, [activeTab, hasEnteredName])
+
+  useEffect(() => {
+    if (!hasEnteredName) {
+      return
+    }
+    try {
+      if (sessionId.trim()) {
+        window.localStorage.setItem(SESSION_ID_KEY, sessionId.trim())
+      }
+    } catch {
+      // Ignore quota errors.
+    }
+  }, [sessionId, hasEnteredName])
+
+  useEffect(() => {
+    let alive = true
+    const ac = new AbortController()
+    setApiHealth('checking')
+    fetch(`${API_BASE_URL}/health`, { signal: ac.signal })
+      .then((r) => {
+        if (alive) {
+          setApiHealth(r.ok ? 'ok' : 'error')
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setApiHealth('error')
+        }
+      })
+    return () => {
+      alive = false
+      ac.abort()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hasEnteredName) {
+      return
+    }
+    const t = setTimeout(() => {
+      const payload = {
+        v: 1,
+        activeTab,
+        resume: {
+          resumeText,
+          jobDescription,
+          planPhase,
+        },
+        interview: {
+          mode,
+          sessionId,
+          interviewJobDescription,
+          interviewResume,
+          goalInput,
+          agentGoal,
+          goalSubtasks,
+          currentQuestion,
+          currentAnswer,
+          answerHistory: answerHistory.slice(0, 8),
+          lastScore,
+          lastFeedback,
+        },
+        outreach: {
+          outreachMessageType,
+          outreachChannel,
+          outreachTone,
+          outreachRecipientName,
+          outreachCompany,
+          outreachRole,
+          outreachNotes,
+          framedMessage,
+          outreachLlmMeta,
+        },
+      }
+      try {
+        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(payload))
+      } catch (err) {
+        console.warn('Could not save workspace draft', err)
+      }
+    }, 550)
+    return () => clearTimeout(t)
+  }, [
+    activeTab,
+    hasEnteredName,
+    resumeText,
+    jobDescription,
+    planPhase,
+    mode,
+    sessionId,
+    interviewJobDescription,
+    interviewResume,
+    goalInput,
+    agentGoal,
+    goalSubtasks,
+    currentQuestion,
+    currentAnswer,
+    answerHistory,
+    lastScore,
+    lastFeedback,
+    outreachMessageType,
+    outreachChannel,
+    outreachTone,
+    outreachRecipientName,
+    outreachCompany,
+    outreachRole,
+    outreachNotes,
+    framedMessage,
+    outreachLlmMeta,
+  ])
 
   useEffect(() => {
     window.localStorage.setItem('aih-weak-areas', JSON.stringify(weakAreasMemory))
@@ -670,6 +958,41 @@ function App() {
     setUserName(trimmedName)
     setHasEnteredName(true)
     window.localStorage.setItem('aih-user-name', trimmedName)
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY)
+      if (raw) {
+        applyWorkspaceDraft(JSON.parse(raw))
+      }
+    } catch {
+      // Ignore malformed local storage.
+    }
+    const h = (window.location.hash || '').replace(/^#/, '')
+    if (isValidTab(h)) {
+      setActiveTab(h)
+    }
+  }
+
+  const goToTab = useCallback((tab) => {
+    if (!isValidTab(tab)) {
+      return
+    }
+    setActiveTab(tab)
+  }, [])
+
+  const handleStartNewInterviewSession = () => {
+    setInterviewError('')
+    setLastScore(null)
+    setLastFeedback('')
+    setCurrentQuestion('')
+    setCurrentAnswer('')
+    setAnswerHistory([])
+    const id = createSessionId()
+    setSessionId(id)
+    try {
+      window.localStorage.setItem(SESSION_ID_KEY, id)
+    } catch {
+      // Ignore.
+    }
   }
 
   const handleTailorResume = async (event) => {
@@ -944,8 +1267,9 @@ function App() {
     return (
       <div className="welcome-page">
         <section className="welcome-card">
-          <h1>Welcome to PrepMate</h1>
-          <p>Enter your name to continue to your interview prep workspace.</p>
+          <p className="welcome-eyebrow">Agentic Interview Helper</p>
+          <h1>Welcome</h1>
+          <p>Enter your name to open your interview prep workspace.</p>
           <form onSubmit={handleEnterApp} className="form">
             <label>
               Your Name
@@ -955,9 +1279,17 @@ function App() {
                 onChange={(event) => setNameFormValue(event.target.value)}
                 placeholder="Enter your name"
                 required
+                autoFocus
+                autoComplete="name"
               />
             </label>
-            <button type="submit">Enter App</button>
+            <p className="welcome-hint">
+              Your name and workspace are saved in this browser. Use links like <code>#interview</code> or{' '}
+              <code>#outreach</code> to open a specific tab.
+            </p>
+            <button type="submit">
+              {nameFormValue.trim() ? 'Continue to workspace' : 'Enter app'}
+            </button>
           </form>
         </section>
       </div>
@@ -965,30 +1297,56 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app__header">
-        <h1>PrepMate</h1>
-        <div className="welcome-banner">
-          <p className="welcome-banner__title">{friendlyGreeting}</p>
-          <p className="muted">{friendlyFact}</p>
+    <div className="workspace">
+      <a href="#workspace-content" className="skip-link">
+        Skip to main content
+      </a>
+      <header className="workspace-topbar">
+        <div className="workspace-topbar__brand">
+          <span className="workspace-topbar__mark" aria-hidden="true">
+            AI
+          </span>
+          <div className="workspace-topbar__brand-text">
+            <span className="workspace-topbar__name">Agentic Interview Helper</span>
+            <span className="workspace-topbar__tagline">Agentic interview prep</span>
+          </div>
         </div>
-        <div className="header-meta">
-          <p className="muted">Session user: {userName}</p>
+        <div className="workspace-topbar__actions">
+          <span className="workspace-topbar__user">{userName}</span>
           <button
             type="button"
-            className="button button--secondary"
+            className="button button--topbar-ghost"
             onClick={() => setHasEnteredName(false)}
           >
             Change name
           </button>
         </div>
-        <p>Resume tailoring, adaptive interviews, and recruiter-ready outreach—in one agentic workspace.</p>
-        <p className="muted">
-          Backend: <code>{API_BASE_URL}</code>
-        </p>
       </header>
+      <div className="workspace-accent" aria-hidden="true" />
+      <main id="workspace-content" className="workspace-main" tabIndex={-1}>
+        <div className="workspace-inner">
+          <section className="workspace-intro" aria-label="Overview">
+            <h1 className="workspace-intro__title">{friendlyGreeting}</h1>
+            <p className="workspace-intro__lede">{friendlyFact}</p>
+            <p className="workspace-api">
+              API <code>{API_BASE_URL}</code>
+              {apiHealth === 'checking' ? (
+                <span className="api-health api-health--checking" aria-live="polite">
+                  Checking…
+                </span>
+              ) : apiHealth === 'ok' ? (
+                <span className="api-health api-health--ok" aria-live="polite">
+                  Connected
+                </span>
+              ) : (
+                <span className="api-health api-health--err" role="status">
+                  Backend unreachable — start the API for PDF, interview, and live outreach.
+                </span>
+              )}
+            </p>
+          </section>
 
-      <section className="agentic-dashboard panel">
+          <section className="agentic-dashboard panel workspace-panel workspace-panel--dashboard">
         <div className="stat-grid">
           <article className="stat-card">
             <p className="stat-card__label">Workflow Progress</p>
@@ -1092,32 +1450,53 @@ function App() {
         </div>
       </section>
 
-      <nav className="tabs" aria-label="Feature tabs">
+          <nav
+            className="tabs tabs--workspace"
+            role="tablist"
+            aria-label="Feature sections"
+          >
         <button
           type="button"
           className={activeTab === 'resume' ? 'tab tab--active' : 'tab'}
-          onClick={() => setActiveTab('resume')}
+          role="tab"
+          id="tab-resume"
+          aria-selected={activeTab === 'resume'}
+          aria-controls="panel-resume"
+          onClick={() => goToTab('resume')}
         >
           Tailor Resume
         </button>
         <button
           type="button"
           className={activeTab === 'interview' ? 'tab tab--active' : 'tab'}
-          onClick={() => setActiveTab('interview')}
+          role="tab"
+          id="tab-interview"
+          aria-selected={activeTab === 'interview'}
+          aria-controls="panel-interview"
+          onClick={() => goToTab('interview')}
         >
           Interview Simulator
         </button>
         <button
           type="button"
           className={activeTab === 'outreach' ? 'tab tab--active' : 'tab'}
-          onClick={() => setActiveTab('outreach')}
+          role="tab"
+          id="tab-outreach"
+          aria-selected={activeTab === 'outreach'}
+          aria-controls="panel-outreach"
+          onClick={() => goToTab('outreach')}
         >
           Professional outreach
         </button>
       </nav>
 
-      {activeTab === 'resume' ? (
-        <section className="panel">
+          {activeTab === 'resume' ? (
+        <section
+          className="panel workspace-panel"
+          id="panel-resume"
+          role="tabpanel"
+          aria-labelledby="tab-resume"
+        >
           <h2>Generate Tailored Resume PDF</h2>
           <form onSubmit={handleTailorResume} className="form">
             <label>
@@ -1128,7 +1507,11 @@ function App() {
                 rows={10}
                 placeholder="Paste your current resume text..."
                 required
+                aria-describedby="hint-resume-wc"
               />
+              <span id="hint-resume-wc" className="field-hint">
+                {resumeWordCount} word{resumeWordCount === 1 ? '' : 's'}
+              </span>
             </label>
 
             <label>
@@ -1139,7 +1522,11 @@ function App() {
                 rows={10}
                 placeholder="Paste the target job description..."
                 required
+                aria-describedby="hint-jd-wc"
               />
+              <span id="hint-jd-wc" className="field-hint">
+                {jdWordCount} word{jdWordCount === 1 ? '' : 's'}
+              </span>
             </label>
 
             <button type="submit" disabled={isTailoring}>
@@ -1168,8 +1555,13 @@ function App() {
             </div>
           ) : null}
         </section>
-      ) : activeTab === 'interview' ? (
-        <section className="panel">
+          ) : activeTab === 'interview' ? (
+        <section
+          className="panel workspace-panel"
+          id="panel-interview"
+          role="tabpanel"
+          aria-labelledby="tab-interview"
+        >
           <h2>Adaptive Interview Session</h2>
           <form onSubmit={handleStartInterview} className="form">
             <div className="row">
@@ -1181,17 +1573,32 @@ function App() {
                 </select>
               </label>
 
-              <label>
-                Session ID
-                <input
-                  type="text"
-                  value={sessionId}
-                  onChange={(event) => setSessionId(event.target.value)}
-                  placeholder="user_123_session_1"
-                  required
-                />
-              </label>
+              <div className="field-with-action">
+                <label className="field-with-action__label">
+                  Session ID
+                  <input
+                    type="text"
+                    value={sessionId}
+                    onChange={(event) => setSessionId(event.target.value)}
+                    placeholder="Auto-generated; edit if you share across devices"
+                    required
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </label>
+                <button
+                  className="button button--secondary"
+                  type="button"
+                  onClick={handleStartNewInterviewSession}
+                >
+                  New session
+                </button>
+              </div>
             </div>
+            <p className="field-hint field-hint--block">
+              Same ID keeps the backend interview memory. Use a new one to start a fresh run (clears the current
+              question and your saved answers in this view).
+            </p>
 
             <label>
               Job Description
@@ -1201,7 +1608,11 @@ function App() {
                 rows={8}
                 placeholder="Paste the target job description..."
                 required
+                aria-describedby="hint-iv-jd-wc"
               />
+              <span id="hint-iv-jd-wc" className="field-hint">
+                {interviewJdWordCount} word{interviewJdWordCount === 1 ? '' : 's'}
+              </span>
             </label>
 
             <label>
@@ -1212,7 +1623,11 @@ function App() {
                 rows={8}
                 placeholder="Paste your resume text..."
                 required
+                aria-describedby="hint-iv-r-wc"
               />
+              <span id="hint-iv-r-wc" className="field-hint">
+                {interviewResumeWordCount} word{interviewResumeWordCount === 1 ? '' : 's'}
+              </span>
             </label>
 
             <button type="submit" disabled={isStartingInterview}>
@@ -1234,7 +1649,12 @@ function App() {
                     rows={6}
                     placeholder="Write your interview answer..."
                     required
+                    aria-describedby="hint-answer-wc"
                   />
+                  <span id="hint-answer-wc" className="field-hint">
+                    {answerWordCount} word{answerWordCount === 1 ? '' : 's'} (aim for ~60–120 for a strong behavioral
+                    answer)
+                  </span>
                 </label>
                 <button type="submit" disabled={isSubmittingAnswer}>
                   {isSubmittingAnswer ? 'Submitting...' : 'Submit Answer'}
@@ -1290,8 +1710,13 @@ function App() {
 
           {interviewError ? <p className="message message--error">{interviewError}</p> : null}
         </section>
-      ) : (
-        <section className="panel panel--outreach">
+          ) : (
+        <section
+          className="panel panel--outreach workspace-panel workspace-panel--outreach"
+          id="panel-outreach"
+          role="tabpanel"
+          aria-labelledby="tab-outreach"
+        >
           <div className="outreach-hero">
             <div>
               <h2>Professional outreach</h2>
@@ -1461,6 +1886,8 @@ function App() {
           </div>
         </section>
       )}
+        </div>
+      </main>
     </div>
   )
 }

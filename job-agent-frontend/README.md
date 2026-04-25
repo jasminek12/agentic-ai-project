@@ -1,8 +1,8 @@
-# PrepMate — Frontend
+# Agentic Interview Helper — Frontend
 
 > **Project overview:** see the repo root [README.md](../README.md).
 
-**Agentic AI UI:** React + Vite SPA for the FastAPI backend—tabs for resume, adaptive interview, and outreach, plus a **goal/workflow-style dashboard** that surfaces agent progress alongside API results (`job-agent-backend`).
+**Agentic AI UI:** React + Vite SPA for the FastAPI backend—tabs for resume, adaptive interview, and outreach, plus a **goal/workflow-style dashboard** that surfaces agent progress alongside API results (`job-agent-backend`). Product name: **Agentic Interview Helper**.
 
 ## Features
 

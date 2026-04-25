@@ -1,4 +1,4 @@
-# PrepMate — Backend (FastAPI + Groq)
+# Agentic Interview Helper — Backend (FastAPI + Groq)
 
 > **Project overview:** see the repo root [README.md](../README.md).
 
