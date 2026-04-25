@@ -6,16 +6,30 @@ const API_BASE_URL =
 
 const DRAFT_KEY = 'aih-workspace-draft'
 const SESSION_ID_KEY = 'aih-session-id'
+const SESSION_COUNTER_KEY = 'aih-session-counter'
 
 function isValidTab(tab) {
   return tab === 'resume' || tab === 'interview' || tab === 'outreach'
 }
 
+function parseSessionNumber(sessionId) {
+  const match = /^session-(\d+)$/.exec(String(sessionId || '').trim())
+  return match ? Number(match[1]) : null
+}
+
 function createSessionId() {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return `session-${crypto.randomUUID()}`
+  if (typeof window === 'undefined') {
+    return `session-${Date.now()}`
   }
-  return `session-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+  try {
+    const rawCounter = window.localStorage.getItem(SESSION_COUNTER_KEY)
+    const currentCounter = Number.parseInt(rawCounter || '0', 10)
+    const nextCounter = Number.isFinite(currentCounter) && currentCounter > 0 ? currentCounter + 1 : 1
+    window.localStorage.setItem(SESSION_COUNTER_KEY, String(nextCounter))
+    return `session-${nextCounter}`
+  } catch {
+    return `session-${Date.now()}`
+  }
 }
 
 function getInitialSessionId() {
@@ -25,6 +39,13 @@ function getInitialSessionId() {
   try {
     const existing = window.localStorage.getItem(SESSION_ID_KEY)?.trim()
     if (existing) {
+      const numericId = parseSessionNumber(existing)
+      if (numericId) {
+        const storedCounter = Number.parseInt(window.localStorage.getItem(SESSION_COUNTER_KEY) || '0', 10)
+        if (!Number.isFinite(storedCounter) || storedCounter < numericId) {
+          window.localStorage.setItem(SESSION_COUNTER_KEY, String(numericId))
+        }
+      }
       return existing
     }
     const id = createSessionId()
