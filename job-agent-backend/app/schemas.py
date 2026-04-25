@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, constr
 
@@ -78,6 +78,8 @@ class StartInterviewRequest(BaseModel):
 
 class StartInterviewResponse(BaseModel):
     question: str = Field(..., example="Tell me about a time you resolved conflict in your team.")
+    interview_started: bool = Field(default=True, example=True)
+    target_question_count: int = Field(default=6, ge=1, example=6)
 
 
 class InterviewStartResponse(StartInterviewResponse):
@@ -100,11 +102,19 @@ class SubmitAnswerRequest(BaseModel):
 class SubmitAnswerResponse(BaseModel):
     score: int = Field(..., ge=0, le=10, example=7)
     feedback: str = Field(..., example="Good structure, but add measurable impact.")
-    next_question: str = Field(..., example="How did you prioritize tasks under tight deadlines?")
+    next_question: str = Field(default="", example="How did you prioritize tasks under tight deadlines?")
     follow_up_question: str = Field(
         default="",
         description="Targeted follow-up generated from the latest answer.",
         example="What metric did you track to validate the improvement?",
+    )
+    waiting_for_next_step: bool = Field(
+        default=False,
+        description="Whether the client must choose follow-up or next question before continuing.",
+    )
+    interview_complete: bool = Field(
+        default=False,
+        description="True only when interview has reached target question count.",
     )
     critique: str = Field(
         default="",
@@ -116,10 +126,7 @@ class SubmitAnswerResponse(BaseModel):
         description="Suggested improved answer draft in the candidate's style.",
         example="In this project, I inherited an API with 1.8s latency...",
     )
-    debrief_actions: List[str] = Field(
-        default_factory=list,
-        description="Three concrete action items for the next practice step.",
-    )
+    debrief_actions: List[str] = Field(default_factory=list, description="End-of-interview action items.")
     next_round_target: str = Field(
         default="",
         description="Measurable target for the next round.",
@@ -133,10 +140,31 @@ class SubmitAnswerResponse(BaseModel):
         default_factory=list,
         description="Top weak topics remembered across this session.",
     )
+    final_evaluation: str = Field(
+        default="",
+        description="Overall interview performance summary. Present only when interview is complete.",
+    )
 
 
 class InterviewAnswerResponse(SubmitAnswerResponse):
     pass
+
+
+class AdvanceInterviewRequest(BaseModel):
+    session_id: constr(strip_whitespace=True, min_length=1) = Field(
+        ...,
+        description="Session identifier used to fetch the correct interview state.",
+        example="user_123_session_1",
+    )
+    choice: constr(strip_whitespace=True, min_length=1) = Field(
+        ...,
+        description="Either 'follow_up' or 'next_question'.",
+        example="follow_up",
+    )
+
+
+class AdvanceInterviewResponse(BaseModel):
+    question: str = Field(..., description="Chosen next question to present to the candidate.")
 
 
 class FrameMessageRequest(BaseModel):
@@ -189,4 +217,8 @@ class InterviewMemory(BaseModel):
     panel_personas: List[str] = Field(default_factory=list)
     panel_turn_index: int = 0
     weak_topic_memory: List[str] = Field(default_factory=list)
+    target_question_count: int = 6
+    answered_count: int = 0
+    pending_next_step: Dict[str, str] = Field(default_factory=dict)
+    interview_complete: bool = False
     history: List[InterviewHistoryItem] = Field(default_factory=list)

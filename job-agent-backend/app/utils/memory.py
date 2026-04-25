@@ -17,6 +17,10 @@ DEFAULT_MEMORY: Dict[str, Any] = {
     "panel_personas": [],
     "panel_turn_index": 0,
     "weak_topic_memory": [],
+    "target_question_count": 6,
+    "answered_count": 0,
+    "pending_next_step": {},
+    "interview_complete": False,
     "history": [],
 }
 

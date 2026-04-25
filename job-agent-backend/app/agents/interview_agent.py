@@ -244,3 +244,36 @@ def build_curriculum_plan(weak_topic_memory: List[str], interview_date: str = ""
         topic = top_topics[day_idx % len(top_topics)]
         plan.append(f"Day {day_idx + 1}: 30-45 min focused drill on {topic} plus one timed mock answer.")
     return plan
+
+
+def estimate_question_count(job_description: str, mode: str) -> int:
+    text = job_description.lower()
+    base = 6 if mode == "behavioral" else 7
+    if any(keyword in text for keyword in ["senior", "staff", "lead", "principal", "architect"]):
+        base += 2
+    if any(keyword in text for keyword in ["intern", "junior", "entry-level", "graduate"]):
+        base -= 1
+    if len(job_description.split()) > 220:
+        base += 1
+    return max(4, min(10, base))
+
+
+def summarize_final_evaluation(history: List[Dict[str, Any]], mode: str) -> str:
+    scored_items = [item for item in history if isinstance(item.get("score"), int)]
+    if not scored_items:
+        return "No scored answers were completed."
+
+    avg_score = sum(int(item["score"]) for item in scored_items) / len(scored_items)
+    all_weak_topics: List[str] = []
+    for item in scored_items:
+        topics = item.get("weak_topics", [])
+        if isinstance(topics, list):
+            all_weak_topics.extend([str(topic).strip() for topic in topics if str(topic).strip()])
+    top_topics = [topic for topic, _ in Counter(all_weak_topics).most_common(3)]
+    strengths = "communication and structure" if avg_score >= 7 else "consistency and clarity growth potential"
+    weak_summary = ", ".join(top_topics) if top_topics else "depth and quantification"
+
+    return (
+        f"Completed {len(scored_items)} {mode} questions with an average score of {avg_score:.1f}/10. "
+        f"Current strengths include {strengths}. Primary improvement themes are {weak_summary}."
+    )

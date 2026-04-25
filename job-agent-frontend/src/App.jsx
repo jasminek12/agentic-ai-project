@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 
 const API_BASE_URL =
@@ -249,6 +249,20 @@ function App() {
   const [companyContext, setCompanyContext] = useState('')
   const [roleContext, setRoleContext] = useState('')
   const [interviewDate, setInterviewDate] = useState('')
+  const [interviewViewActive, setInterviewViewActive] = useState(false)
+  const [interviewStatusMessage, setInterviewStatusMessage] = useState('')
+  const [interviewStage, setInterviewStage] = useState('session')
+  const [targetQuestionCount, setTargetQuestionCount] = useState(0)
+  const [answeredCount, setAnsweredCount] = useState(0)
+  const [pendingNextQuestion, setPendingNextQuestion] = useState('')
+  const [showFollowUpPreview, setShowFollowUpPreview] = useState(false)
+  const [showNextQuestionPreview, setShowNextQuestionPreview] = useState(false)
+  const [waitingForNextStep, setWaitingForNextStep] = useState(false)
+  const [isAdvancingInterview, setIsAdvancingInterview] = useState(false)
+  const [finalEvaluation, setFinalEvaluation] = useState('')
+  const [interviewComplete, setInterviewComplete] = useState(false)
+  const [questionTrail, setQuestionTrail] = useState([])
+  const [questionTrailIndex, setQuestionTrailIndex] = useState(0)
   const [currentQuestion, setCurrentQuestion] = useState('')
   const [currentAnswer, setCurrentAnswer] = useState('')
   const [lastScore, setLastScore] = useState(null)
@@ -256,6 +270,8 @@ function App() {
   const [latestFollowUpQuestion, setLatestFollowUpQuestion] = useState('')
   const [latestCritique, setLatestCritique] = useState('')
   const [latestRewrite, setLatestRewrite] = useState('')
+  const [isRewriteSpeaking, setIsRewriteSpeaking] = useState(false)
+  const [rewriteSpeechProgress, setRewriteSpeechProgress] = useState(0)
   const [debriefActions, setDebriefActions] = useState([])
   const [nextRoundTarget, setNextRoundTarget] = useState('')
   const [curriculumPlan, setCurriculumPlan] = useState([])
@@ -282,6 +298,9 @@ function App() {
   const [isFramingOutreach, setIsFramingOutreach] = useState(false)
   const [outreachLlmMeta, setOutreachLlmMeta] = useState(null)
   const [apiHealth, setApiHealth] = useState('checking')
+  const rewriteUtteranceRef = useRef(null)
+  const rewriteSpeechOffsetRef = useRef(0)
+  const evaluationTimerRef = useRef(null)
 
   const applyWorkspaceDraft = useCallback((d) => {
     if (!d || d.v !== 1) {
@@ -341,6 +360,36 @@ function App() {
       }
       if (typeof iv.interviewDate === 'string') {
         setInterviewDate(iv.interviewDate)
+      }
+      if (typeof iv.interviewViewActive === 'boolean') {
+        setInterviewViewActive(iv.interviewViewActive)
+      }
+      if (typeof iv.interviewStatusMessage === 'string') {
+        setInterviewStatusMessage(iv.interviewStatusMessage)
+      }
+      if (typeof iv.targetQuestionCount === 'number') {
+        setTargetQuestionCount(iv.targetQuestionCount)
+      }
+      if (typeof iv.answeredCount === 'number') {
+        setAnsweredCount(iv.answeredCount)
+      }
+      if (typeof iv.pendingNextQuestion === 'string') {
+        setPendingNextQuestion(iv.pendingNextQuestion)
+      }
+      if (typeof iv.waitingForNextStep === 'boolean') {
+        setWaitingForNextStep(iv.waitingForNextStep)
+      }
+      if (typeof iv.finalEvaluation === 'string') {
+        setFinalEvaluation(iv.finalEvaluation)
+      }
+      if (typeof iv.interviewComplete === 'boolean') {
+        setInterviewComplete(iv.interviewComplete)
+      }
+      if (Array.isArray(iv.questionTrail)) {
+        setQuestionTrail(iv.questionTrail.slice(0, 40))
+      }
+      if (typeof iv.questionTrailIndex === 'number') {
+        setQuestionTrailIndex(iv.questionTrailIndex)
       }
       if (typeof iv.goalInput === 'string') {
         setGoalInput(iv.goalInput)
@@ -429,16 +478,6 @@ function App() {
     if (savedName) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setNameFormValue(savedName)
-      setUserName(savedName)
-      setHasEnteredName(true)
-      try {
-        const raw = window.localStorage.getItem(DRAFT_KEY)
-        if (raw) {
-          applyWorkspaceDraft(JSON.parse(raw))
-        }
-      } catch {
-        // Ignore malformed local storage.
-      }
     }
 
     const savedWeakAreas = window.localStorage.getItem('aih-weak-areas')
@@ -468,6 +507,18 @@ function App() {
     }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+      if (evaluationTimerRef.current) {
+        window.clearTimeout(evaluationTimerRef.current)
+        evaluationTimerRef.current = null
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -541,6 +592,16 @@ function App() {
           companyContext,
           roleContext,
           interviewDate,
+          interviewViewActive,
+          interviewStatusMessage,
+          targetQuestionCount,
+          answeredCount,
+          pendingNextQuestion,
+          waitingForNextStep,
+          finalEvaluation,
+          interviewComplete,
+          questionTrail: questionTrail.slice(0, 40),
+          questionTrailIndex,
           goalInput,
           agentGoal,
           goalSubtasks,
@@ -590,6 +651,16 @@ function App() {
     companyContext,
     roleContext,
     interviewDate,
+    interviewViewActive,
+    interviewStatusMessage,
+    targetQuestionCount,
+    answeredCount,
+    pendingNextQuestion,
+    waitingForNextStep,
+    finalEvaluation,
+    interviewComplete,
+    questionTrail,
+    questionTrailIndex,
     goalInput,
     agentGoal,
     goalSubtasks,
@@ -648,6 +719,25 @@ function App() {
   const canSubmitAnswer = useMemo(() => {
     return Boolean(currentQuestion) && currentAnswer.trim().length > 0
   }, [currentAnswer, currentQuestion])
+  const speechSupported = useMemo(() => {
+    return (
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      typeof window.SpeechSynthesisUtterance !== 'undefined'
+    )
+  }, [])
+  const isViewingLatestQuestion = useMemo(() => {
+    if (!questionTrail.length) {
+      return true
+    }
+    return questionTrailIndex >= questionTrail.length - 1
+  }, [questionTrail, questionTrailIndex])
+  const displayedQuestion = useMemo(() => {
+    if (!questionTrail.length) {
+      return currentQuestion
+    }
+    return questionTrail[questionTrailIndex] || currentQuestion
+  }, [currentQuestion, questionTrail, questionTrailIndex])
 
   const resumeWordCount = useMemo(() => toWordCount(resumeText), [resumeText])
   const jdWordCount = useMemo(() => toWordCount(jobDescription), [jobDescription])
@@ -1048,12 +1138,34 @@ function App() {
   }, [])
 
   const handleStartNewInterviewSession = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    setIsRewriteSpeaking(false)
+    setRewriteSpeechProgress(0)
     setInterviewError('')
     setLastScore(null)
     setLastFeedback('')
     setCurrentQuestion('')
     setCurrentAnswer('')
     setAnswerHistory([])
+    setQuestionTrail([])
+    setQuestionTrailIndex(0)
+    setAnsweredCount(0)
+    setTargetQuestionCount(0)
+    setPendingNextQuestion('')
+    setShowFollowUpPreview(false)
+    setShowNextQuestionPreview(false)
+    setWaitingForNextStep(false)
+    setFinalEvaluation('')
+    setInterviewComplete(false)
+    setInterviewStatusMessage('')
+    setInterviewStage('session')
+    if (evaluationTimerRef.current) {
+      window.clearTimeout(evaluationTimerRef.current)
+      evaluationTimerRef.current = null
+    }
+    setInterviewViewActive(false)
     setLatestFollowUpQuestion('')
     setLatestCritique('')
     setLatestRewrite('')
@@ -1252,6 +1364,11 @@ function App() {
 
   const handleStartInterview = async (event) => {
     event.preventDefault()
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    setIsRewriteSpeaking(false)
+    setRewriteSpeechProgress(0)
     setInterviewError('')
     setLastScore(null)
     setLastFeedback('')
@@ -1263,6 +1380,22 @@ function App() {
     setDebriefActions([])
     setNextRoundTarget('')
     setCurriculumPlan([])
+    setPendingNextQuestion('')
+    setShowFollowUpPreview(false)
+    setShowNextQuestionPreview(false)
+    setWaitingForNextStep(false)
+    setAnsweredCount(0)
+    setTargetQuestionCount(0)
+    setFinalEvaluation('')
+    setInterviewComplete(false)
+    setQuestionTrail([])
+    setQuestionTrailIndex(0)
+    setInterviewStatusMessage('')
+    setInterviewStage('session')
+    if (evaluationTimerRef.current) {
+      window.clearTimeout(evaluationTimerRef.current)
+      evaluationTimerRef.current = null
+    }
 
     if (!interviewJobDescription.trim() || !interviewResume.trim() || !sessionId.trim()) {
       setInterviewError('Mode, session ID, job description, and resume are required.')
@@ -1294,6 +1427,12 @@ function App() {
 
       const data = await response.json()
       setCurrentQuestion(data.question || '')
+      setQuestionTrail(data.question ? [data.question] : [])
+      setQuestionTrailIndex(0)
+      setInterviewViewActive(true)
+      setInterviewStatusMessage(data.interview_started ? 'Interview started.' : '')
+      setInterviewStage('session')
+      setTargetQuestionCount(data.target_question_count || 0)
     } catch (error) {
       setInterviewError(error.message || 'Failed to start interview.')
     } finally {
@@ -1327,31 +1466,224 @@ function App() {
       }
 
       const data = await response.json()
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+      setIsRewriteSpeaking(false)
+      setRewriteSpeechProgress(0)
       setLastScore(data.score ?? null)
       setLastFeedback(data.feedback ?? '')
       setLatestFollowUpQuestion(data.follow_up_question ?? '')
+      setPendingNextQuestion(data.next_question ?? '')
+      setShowFollowUpPreview(false)
+      setShowNextQuestionPreview(false)
+      setWaitingForNextStep(Boolean(data.waiting_for_next_step))
       setLatestCritique(data.critique ?? '')
       setLatestRewrite(data.rewrite ?? '')
       setDebriefActions(Array.isArray(data.debrief_actions) ? data.debrief_actions.slice(0, 3) : [])
       setNextRoundTarget(data.next_round_target ?? '')
       setCurriculumPlan(Array.isArray(data.curriculum_plan) ? data.curriculum_plan.slice(0, 7) : [])
+      setFinalEvaluation(data.final_evaluation ?? '')
+      const nextAnsweredCount = answeredCount + 1
+      const derivedComplete =
+        Boolean(data.interview_complete) ||
+        (Number(targetQuestionCount) > 0 && nextAnsweredCount >= Number(targetQuestionCount))
+      setInterviewComplete(derivedComplete)
+      setAnsweredCount(nextAnsweredCount)
       const detectedWeakAreas = computeWeakAreas(currentAnswer, data.feedback ?? '', data.score ?? null)
       setWeakAreasMemory((prev) => [...detectedWeakAreas, ...prev].slice(0, 40))
       setAnswerHistory((prev) => [
         {
+          question: currentQuestion,
+          answer: currentAnswer,
           score: data.score ?? null,
           feedback: data.feedback ?? '',
           answeredAt: new Date().toLocaleTimeString(),
         },
         ...prev,
       ])
-      setCurrentQuestion(data.next_question || '')
+      if (derivedComplete) {
+        setCurrentQuestion('')
+        setInterviewStatusMessage('Interview simulation done.')
+        setInterviewStage('completed')
+      } else {
+        setInterviewStage('session')
+        setInterviewStatusMessage('Choose your next step: follow-up question or next main question.')
+      }
       setCurrentAnswer('')
     } catch (error) {
       setInterviewError(error.message || 'Failed to submit answer.')
     } finally {
       setIsSubmittingAnswer(false)
     }
+  }
+
+  const handleAdvanceInterview = async (choice) => {
+    if (!waitingForNextStep || !sessionId.trim()) {
+      return
+    }
+    setInterviewError('')
+    setIsAdvancingInterview(true)
+    try {
+      const response = await fetch(`${API_BASE_URL}/advance-interview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          choice,
+        }),
+      })
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Failed to advance interview.')
+        throw new Error(message)
+      }
+      const data = await response.json()
+      const nextQ = data.question || ''
+      setCurrentQuestion(nextQ)
+      if (nextQ) {
+        setQuestionTrail((prev) => {
+          const updated = [...prev, nextQ].slice(-40)
+          setQuestionTrailIndex(Math.max(0, updated.length - 1))
+          return updated
+        })
+      }
+      setWaitingForNextStep(false)
+      setLatestFollowUpQuestion('')
+      setPendingNextQuestion('')
+      setShowFollowUpPreview(false)
+      setShowNextQuestionPreview(false)
+      setInterviewStatusMessage(choice === 'follow_up' ? 'Follow-up selected.' : 'Moved to next main question.')
+    } catch (error) {
+      setInterviewError(error.message || 'Failed to advance interview.')
+    } finally {
+      setIsAdvancingInterview(false)
+    }
+  }
+
+  const handleToggleRewriteAudio = () => {
+    const speechSupported =
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      typeof window.SpeechSynthesisUtterance !== 'undefined'
+    if (!latestRewrite.trim() || !speechSupported || typeof window === 'undefined') {
+      return
+    }
+
+    const stopRewriteAudio = () => {
+      window.speechSynthesis.cancel()
+      setIsRewriteSpeaking(false)
+    }
+
+    const startRewriteAudioFromProgress = (progressValue) => {
+      const fullText = latestRewrite.trim()
+      if (!fullText) {
+        return
+      }
+      const clampedProgress = Math.max(0, Math.min(100, progressValue))
+      const rawStartIndex = Math.floor((clampedProgress / 100) * fullText.length)
+      const boundedStart = Math.max(0, Math.min(fullText.length - 1, rawStartIndex))
+      const rawSlice = fullText.slice(boundedStart)
+      const spokenSlice = rawSlice.trimStart()
+      if (!spokenSlice) {
+        setRewriteSpeechProgress(100)
+        setIsRewriteSpeaking(false)
+        return
+      }
+      const leadingTrimCount = rawSlice.length - spokenSlice.length
+      rewriteSpeechOffsetRef.current = boundedStart + leadingTrimCount
+
+      window.speechSynthesis.cancel()
+      const utterance = new window.SpeechSynthesisUtterance(spokenSlice)
+      utterance.rate = 1
+      utterance.pitch = 1
+      utterance.onboundary = (event) => {
+        if (typeof event.charIndex !== 'number' || !fullText.length) {
+          return
+        }
+        const absoluteChar = rewriteSpeechOffsetRef.current + event.charIndex
+        const nextProgress = Math.max(0, Math.min(100, (absoluteChar / fullText.length) * 100))
+        setRewriteSpeechProgress(nextProgress)
+      }
+      utterance.onend = () => {
+        setIsRewriteSpeaking(false)
+        setRewriteSpeechProgress(100)
+      }
+      utterance.onerror = () => setIsRewriteSpeaking(false)
+      rewriteUtteranceRef.current = utterance
+      window.speechSynthesis.speak(utterance)
+      setIsRewriteSpeaking(true)
+    }
+
+    if (isRewriteSpeaking) {
+      stopRewriteAudio()
+      return
+    }
+    const shouldRestartFromTop = rewriteSpeechProgress >= 99
+    startRewriteAudioFromProgress(shouldRestartFromTop ? 0 : rewriteSpeechProgress)
+  }
+
+  const handleRewriteSeekChange = (event) => {
+    setRewriteSpeechProgress(Number(event.target.value))
+  }
+
+  const handleRewriteSeekCommit = () => {
+    const speechSupported =
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      typeof window.SpeechSynthesisUtterance !== 'undefined'
+    if (!speechSupported || typeof window === 'undefined' || !latestRewrite.trim()) {
+      return
+    }
+    if (!isRewriteSpeaking) {
+      return
+    }
+
+    const fullText = latestRewrite.trim()
+    const clampedProgress = Math.max(0, Math.min(100, rewriteSpeechProgress))
+    const rawStartIndex = Math.floor((clampedProgress / 100) * fullText.length)
+    const boundedStart = Math.max(0, Math.min(fullText.length - 1, rawStartIndex))
+    const rawSlice = fullText.slice(boundedStart)
+    const spokenSlice = rawSlice.trimStart()
+    if (!spokenSlice) {
+      window.speechSynthesis.cancel()
+      setIsRewriteSpeaking(false)
+      setRewriteSpeechProgress(100)
+      return
+    }
+    const leadingTrimCount = rawSlice.length - spokenSlice.length
+    rewriteSpeechOffsetRef.current = boundedStart + leadingTrimCount
+    window.speechSynthesis.cancel()
+    const utterance = new window.SpeechSynthesisUtterance(spokenSlice)
+    utterance.rate = 1
+    utterance.pitch = 1
+    utterance.onboundary = (event) => {
+      if (typeof event.charIndex !== 'number' || !fullText.length) {
+        return
+      }
+      const absoluteChar = rewriteSpeechOffsetRef.current + event.charIndex
+      const nextProgress = Math.max(0, Math.min(100, (absoluteChar / fullText.length) * 100))
+      setRewriteSpeechProgress(nextProgress)
+    }
+    utterance.onend = () => {
+      setIsRewriteSpeaking(false)
+      setRewriteSpeechProgress(100)
+    }
+    utterance.onerror = () => setIsRewriteSpeaking(false)
+    rewriteUtteranceRef.current = utterance
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const handleViewEvaluationResults = () => {
+    setInterviewStage('preparing')
+    setInterviewStatusMessage('Evaluating your results...')
+    if (evaluationTimerRef.current) {
+      window.clearTimeout(evaluationTimerRef.current)
+    }
+    evaluationTimerRef.current = window.setTimeout(() => {
+      setInterviewStage('results')
+      setInterviewStatusMessage('Your interview evaluation is ready.')
+      evaluationTimerRef.current = null
+    }, 1800)
   }
 
   if (!hasEnteredName) {
@@ -1383,6 +1715,285 @@ function App() {
             </button>
           </form>
         </section>
+      </div>
+    )
+  }
+
+  if (interviewViewActive) {
+    return (
+      <div className="workspace">
+        <header className="workspace-topbar">
+          <div className="workspace-topbar__brand">
+            <span className="workspace-topbar__mark" aria-hidden="true">
+              AI
+            </span>
+            <div className="workspace-topbar__brand-text">
+              <span className="workspace-topbar__name">Interview Room</span>
+              <span className="workspace-topbar__tagline">Focused mock interview session</span>
+            </div>
+          </div>
+          <div className="workspace-topbar__actions">
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => {
+                setInterviewViewActive(false)
+                goToTab('interview')
+              }}
+            >
+              Back to workspace
+            </button>
+          </div>
+        </header>
+        <main className="workspace-main" tabIndex={-1}>
+          <div className="workspace-inner">
+            <section className="panel workspace-panel">
+              <h2>Live Interview</h2>
+              <div className="interview-meta-row">
+                {interviewStatusMessage && interviewStage !== 'results' && interviewStage !== 'completed' ? (
+                  <span className="interview-status-chip">{interviewStatusMessage}</span>
+                ) : null}
+                <p className="field-hint interview-progress-hint">
+                  Progress: {answeredCount}/{targetQuestionCount || '?'} answered
+                </p>
+              </div>
+              {interviewStage === 'preparing' ? (
+                <div className="evaluation-preparing">
+                  <h3>Evaluating Your Interview...</h3>
+                  <p>Analyzing your answers, strengths, and key improvement opportunities.</p>
+                  <div className="evaluation-preparing__dots" aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+              ) : null}
+              {interviewStage === 'completed' ? (
+                <div className="evaluation-results">
+                  <h3>Interview Simulation Done</h3>
+                  <p className="evaluation-results__lede">
+                    Nice work finishing your interview simulation. Your responses are saved and ready for evaluation.
+                  </p>
+                  <article className="evaluation-results__card">
+                    <h4>Session Summary</h4>
+                    <p>
+                      You answered {answeredCount} of {targetQuestionCount || answeredCount} planned questions.
+                    </p>
+                  </article>
+                  <div className="row">
+                    <button type="button" className="button button--primary" onClick={handleViewEvaluationResults}>
+                      View evaluated results
+                    </button>
+                    <button type="button" className="button button--secondary" onClick={handleStartNewInterviewSession}>
+                      Start new interview
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {interviewStage === 'results' ? (
+                <div className="evaluation-results">
+                  <h3>Interview Completed</h3>
+                  <p className="evaluation-results__lede">
+                    Great work completing your mock interview. Here is your personalized evaluation and next-step plan.
+                  </p>
+                  {finalEvaluation ? (
+                    <article className="evaluation-results__card">
+                      <h4>Overall Evaluation</h4>
+                      <p>{finalEvaluation}</p>
+                    </article>
+                  ) : null}
+                  {debriefActions.length > 0 ? (
+                    <article className="evaluation-results__card">
+                      <h4>Action Plan</h4>
+                      <ul className="history-list">
+                        {debriefActions.map((action) => (
+                          <li key={action}>{action}</li>
+                        ))}
+                      </ul>
+                    </article>
+                  ) : null}
+                  {nextRoundTarget ? (
+                    <article className="evaluation-results__card">
+                      <h4>Next Interview Target</h4>
+                      <p>{nextRoundTarget}</p>
+                    </article>
+                  ) : null}
+                  {curriculumPlan.length > 0 ? (
+                    <article className="evaluation-results__card">
+                      <h4>Preparation Curriculum</h4>
+                      <ul className="history-list">
+                        {curriculumPlan.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </article>
+                  ) : null}
+                  <div className="row">
+                    <button type="button" className="button button--primary" onClick={handleStartNewInterviewSession}>
+                      Start new interview
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--secondary"
+                      onClick={() => {
+                        setInterviewViewActive(false)
+                        goToTab('interview')
+                      }}
+                    >
+                      Back to workspace
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {interviewStage === 'session' ? (
+                <>
+              {questionTrail.length > 1 ? (
+                <div className="row">
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    disabled={questionTrailIndex <= 0}
+                    onClick={() => setQuestionTrailIndex((prev) => Math.max(0, prev - 1))}
+                  >
+                    Previous question
+                  </button>
+                </div>
+              ) : null}
+              {displayedQuestion ? (
+                <div className="question-card">
+                  <h3>{isViewingLatestQuestion ? 'Current Question' : 'Previous Question (read-only view)'}</h3>
+                  <p>{displayedQuestion}</p>
+                </div>
+              ) : null}
+
+              {!interviewComplete && currentQuestion ? (
+                <form onSubmit={handleSubmitAnswer} className="form">
+                  <label>
+                    Your Answer
+                    <textarea
+                      value={currentAnswer}
+                      onChange={(event) => setCurrentAnswer(event.target.value)}
+                      rows={7}
+                      placeholder="Write your interview answer..."
+                      required
+                      disabled={!isViewingLatestQuestion || waitingForNextStep}
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingAnswer || waitingForNextStep || !isViewingLatestQuestion}
+                  >
+                    {isSubmittingAnswer ? 'Submitting...' : 'Submit Answer'}
+                  </button>
+                </form>
+              ) : null}
+
+              {waitingForNextStep ? (
+                <div className="question-card next-step-card">
+                  <h3>Choose next step</h3>
+                  <p className="next-step-card__subtitle">
+                    Pick one path. You can preview each question before choosing.
+                  </p>
+                  <div className="next-step-grid">
+                    <article className="next-step-option">
+                      <h4>Follow-up path</h4>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!latestFollowUpQuestion}
+                        onClick={() => setShowFollowUpPreview((prev) => !prev)}
+                      >
+                        {showFollowUpPreview ? 'Hide preview' : 'Preview question'}
+                      </button>
+                      {latestFollowUpQuestion && showFollowUpPreview ? (
+                        <p className="message message--info">
+                          {latestFollowUpQuestion}
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="button button--primary"
+                        disabled={!latestFollowUpQuestion || isAdvancingInterview}
+                        onClick={() => void handleAdvanceInterview('follow_up')}
+                      >
+                        {isAdvancingInterview ? 'Loading...' : 'Answer follow-up'}
+                      </button>
+                    </article>
+
+                    <article className="next-step-option">
+                      <h4>Next main question</h4>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!pendingNextQuestion}
+                        onClick={() => setShowNextQuestionPreview((prev) => !prev)}
+                      >
+                        {showNextQuestionPreview ? 'Hide preview' : 'Preview question'}
+                      </button>
+                      {pendingNextQuestion && showNextQuestionPreview ? (
+                        <p className="message message--info">
+                          {pendingNextQuestion}
+                        </p>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="button button--secondary"
+                        disabled={!pendingNextQuestion || isAdvancingInterview}
+                        onClick={() => void handleAdvanceInterview('next_question')}
+                      >
+                        Go to next question
+                      </button>
+                    </article>
+                  </div>
+                </div>
+              ) : null}
+
+              {lastScore !== null ? <p className="message message--info">Score: {lastScore} / 10</p> : null}
+              {lastFeedback ? <p className="message message--success">{lastFeedback}</p> : null}
+              {latestCritique ? (
+                <p className="message message--info">
+                  <strong>Critique:</strong> {latestCritique}
+                </p>
+              ) : null}
+              {latestRewrite ? (
+                <div className="message message--success">
+                  <p>
+                    <strong>Suggested rewrite:</strong> {latestRewrite}
+                  </p>
+                  <div className="rewrite-audio-row">
+                    <div className="rewrite-audio-controls">
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!speechSupported}
+                        onClick={handleToggleRewriteAudio}
+                      >
+                        Listen
+                      </button>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={Math.round(rewriteSpeechProgress)}
+                        onChange={handleRewriteSeekChange}
+                        onMouseUp={handleRewriteSeekCommit}
+                        onTouchEnd={handleRewriteSeekCommit}
+                        className="rewrite-audio-slider"
+                        aria-label="Rewrite audio position"
+                        disabled={!speechSupported}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+                </>
+              ) : null}
+
+              {interviewError ? <p className="message message--error">{interviewError}</p> : null}
+            </section>
+          </div>
+        </main>
       </div>
     )
   }
@@ -1831,6 +2442,31 @@ function App() {
                     <strong>Suggested rewrite:</strong>
                   </p>
                   <p>{latestRewrite}</p>
+                  <div className="rewrite-audio-row">
+                    <div className="rewrite-audio-controls">
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!speechSupported}
+                        onClick={handleToggleRewriteAudio}
+                      >
+                        Listen
+                      </button>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={Math.round(rewriteSpeechProgress)}
+                        onChange={handleRewriteSeekChange}
+                        onMouseUp={handleRewriteSeekCommit}
+                        onTouchEnd={handleRewriteSeekCommit}
+                        className="rewrite-audio-slider"
+                        aria-label="Rewrite audio position"
+                        disabled={!speechSupported}
+                      />
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </div>

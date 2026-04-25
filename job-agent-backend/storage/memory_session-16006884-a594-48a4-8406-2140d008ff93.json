@@ -12,32 +12,150 @@
     "hiring_manager",
     "domain_expert"
   ],
-  "panel_turn_index": 2,
+  "panel_turn_index": 8,
   "weak_topic_memory": [
-    "leadership skills",
-    "challenge resolution"
+    "communication",
+    "storytelling",
+    "communication skills",
+    "technical explanation",
+    "stakeholder management",
+    "communication",
+    "problem-solving",
+    "context",
+    "outcome",
+    "context setting",
+    "outcome measurement",
+    "outcome measurement",
+    "project impact",
+    "providing specific metrics or outcomes",
+    "describing a more complex project scenario",
+    "providing metrics or results",
+    "describing project outcome and impact"
   ],
+  "target_question_count": 8,
+  "answered_count": 8,
+  "pending_next_step": {},
+  "interview_complete": true,
   "history": [
     {
-      "question": "Tell me about a time when you had to collaborate with a team to solve a complex problem, such as the Datathon Project where you led a team to predict customer churn. How did you guide your team in selecting machine learning algorithms and what was the outcome of your project?",
-      "answer": "During our Datathon project, I led a team to predict customer churn by first aligning everyone on the problem and dataset. I guided the team to compare algorithms like logistic regression, random forest, and XGBoost based on interpretability and performance, and we validated them using cross-validation. We ultimately chose XGBoost for its accuracy, achieving a strong AUC score, and our model helped identify key churn drivers, which we presented with clear business insights.",
-      "score": 8,
-      "persona": "recruiter",
-      "focus_area": "teamwork and leadership",
-      "feedback": "The candidate provided a clear and concise example of collaborating with a team to solve a complex problem. They effectively guided their team in selecting machine learning algorithms and achieved a strong outcome. However, the answer could be improved by providing more specific details about the challenges faced and the candidate's leadership role.",
-      "weak_topics": [
-        "leadership skills",
-        "challenge resolution"
-      ],
-      "critique": "The answer is straightforward but lacks depth in describing the candidate's leadership skills and how they overcame potential challenges during the project.",
-      "rewrite": "During the Datathon project, I led a team of diverse skill sets to predict customer churn, first ensuring everyone understood the problem and dataset. As the team leader, I facilitated discussions to compare logistic regression, random forest, and XGBoost based on interpretability and performance. We encountered a challenge in balancing model complexity with interpretability, but through cross-validation and iterative testing, we validated our approach and chose XGBoost for its superior accuracy, achieving a high AUC score. Our model not only identified key churn drivers but also provided actionable business insights, which we presented to stakeholders. Through this project, I learned the importance of adaptive leadership, effective communication, and collaborative problem-solving in driving a team towards a successful outcome."
-    },
-    {
-      "question": "Tell me about a time when you faced a significant challenge in a team project, such as the Datathon Project, and how you leveraged your leadership skills to resolve it and ensure the team's success. What specific actions did you take, and what was the outcome of your efforts?",
+      "question": "Tell me about a time when you had to collaborate with a team to solve a complex problem, such as the Datathon Project where you led a team to predict customer churn. How did you ensure that your team was working effectively together, and what was the outcome of your collaboration?",
       "answer": "",
       "score": null,
+      "persona": "recruiter",
+      "focus_area": "teamwork and leadership"
+    },
+    {
+      "question": "Describe a situation where you had to communicate complex technical ideas to a non-technical audience, such as explaining your data analysis findings to stakeholders or presenting your project results to a panel. How did you approach the communication, and what strategies did you use to ensure your message was understood?",
+      "answer": ".",
+      "score": 0,
+      "persona": "recruiter",
+      "focus_area": "teamwork and communication",
+      "feedback": "The candidate did not provide a response to the question, which is a critical aspect of a behavioral interview. To effectively communicate complex technical ideas, it's essential to provide a specific example from past experience.",
+      "weak_topics": [
+        "communication",
+        "storytelling"
+      ],
+      "critique": "The candidate failed to provide a concrete example, making it impossible to assess their ability to communicate technical ideas to a non-technical audience.",
+      "rewrite": "In my previous role, I had to present data analysis findings to a stakeholder group with limited technical background. I approached the communication by first understanding the stakeholders' needs and concerns, and then tailoring my message to focus on the key insights and recommendations. I used analogies, visual aids, and simple language to explain complex concepts, and provided examples to illustrate the practical applications of the findings. I also encouraged questions and feedback to ensure my message was understood, and adjusted my communication strategy accordingly."
+    },
+    {
+      "question": "Tell me about a time when you had to explain a complex technical concept, such as a machine learning model or a software development project, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
+      "answer": "no clue",
+      "score": 0,
       "persona": "hiring_manager",
-      "focus_area": "leadership skills and challenge resolution"
+      "focus_area": "communication and storytelling",
+      "feedback": "The candidate failed to provide a relevant example or any insight into their experience with explaining complex technical concepts to non-technical stakeholders. This lack of response indicates a potential gap in communication skills, a crucial aspect of working in a team environment.",
+      "weak_topics": [
+        "communication skills",
+        "technical explanation",
+        "stakeholder management"
+      ],
+      "critique": "The answer does not address the question, showing a lack of preparation or experience in explaining technical concepts to non-technical audiences.",
+      "rewrite": "In my previous role, I had to explain a machine learning model to a marketing team. I approached this by first understanding their level of technical knowledge and then using analogies and visual aids to simplify the concept. I ensured my message was understood by asking for feedback and adjusting my explanation accordingly."
+    },
+    {
+      "question": "Tell me about a time when you had to explain a technical concept, such as a data structure or an algorithm, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
+      "answer": "im not sure",
+      "score": 0,
+      "persona": "domain_expert",
+      "focus_area": "communication skills",
+      "feedback": "The candidate's response lacks a specific example and explanation of how they approached the situation, making it difficult to assess their ability to communicate technical concepts effectively.",
+      "weak_topics": [
+        "communication",
+        "problem-solving"
+      ],
+      "critique": "The candidate failed to provide a concrete example, and their response does not demonstrate any understanding of strategies for explaining technical concepts to non-technical stakeholders.",
+      "rewrite": "In my previous role, I had to explain the concept of a hash table to a non-technical team member. I approached the explanation by using an analogy, comparing it to a phonebook where each name is associated with a phone number. I also used visual aids, such as diagrams, to help illustrate the concept. To ensure understanding, I asked questions throughout the explanation and provided examples of how hash tables are used in real-world applications."
+    },
+    {
+      "question": "Tell me about a time when you had to explain a complex technical concept, such as a machine learning model or a software development project, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
+      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
+      "score": 8,
+      "persona": "recruiter",
+      "focus_area": "communication skills",
+      "feedback": "The candidate provided a clear and concise example of explaining a complex technical concept to a non-technical team member. They effectively used analogies, avoided jargon, and incorporated visual aids to facilitate understanding. However, the answer could be improved by providing more specific details about the context and the outcome of the explanation.",
+      "weak_topics": [
+        "context",
+        "outcome"
+      ],
+      "critique": "The answer is brief and lacks specific details about the Datathon and the teammate's response to the explanation.",
+      "rewrite": "In my Datathon project, I had to explain a complex recommendation algorithm to a non-technical teammate who was responsible for presenting the results to stakeholders. I approached the explanation by using simple analogies, such as 'ranking preferences like sorting favorites,' and avoided using technical jargon. I also created a quick visual flow to illustrate how the algorithm worked and tied it to the business outcomes we were trying to achieve. To ensure understanding, I paused to confirm my teammate's comprehension and asked for feedback. As a result, my teammate was able to effectively communicate the results to the stakeholders, and we were able to implement the algorithm successfully."
+    },
+    {
+      "question": "Tell me about a time when you had to communicate a complex technical idea, such as a data analysis finding or a software development concept, to a non-technical audience, like stakeholders or a team without a technical background. How did you approach the communication, and what strategies did you use to ensure your message was understood?",
+      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
+      "score": 7,
+      "persona": "hiring_manager",
+      "focus_area": "communication skills",
+      "feedback": "The candidate provided a clear example of communicating a complex technical idea to a non-technical audience. However, the answer could be improved with more specific details about the context and the outcome of the communication.",
+      "weak_topics": [
+        "context setting",
+        "outcome measurement"
+      ],
+      "critique": "The answer is concise but lacks specific details about the Datathon, the teammate's background, and the impact of the explanation on the project or business outcomes.",
+      "rewrite": "In a recent Datathon project, I had to explain a complex recommendation algorithm to a non-technical teammate who was responsible for presenting our findings to stakeholders. To approach this, I used simple analogies like 'ranking preferences like sorting favorites' and avoided technical jargon. I also created a quick visual flow to illustrate the concept and tied it to specific business outcomes, such as increased customer engagement. Throughout the explanation, I paused to confirm understanding and asked for feedback, which helped ensure my message was clear and easy to follow. As a result, my teammate was able to effectively communicate the concept to stakeholders, and we were able to implement the algorithm, leading to a significant improvement in customer satisfaction."
+    },
+    {
+      "question": "Tell me about a time when you had to explain a complex technical concept, such as a machine learning model or a software development project, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
+      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
+      "score": 8,
+      "persona": "domain_expert",
+      "focus_area": "communication skills",
+      "feedback": "The candidate provided a clear and concise example of explaining a complex technical concept to a non-technical team member. They effectively used analogies, avoided jargon, and incorporated visual aids to facilitate understanding. However, the answer could be improved with more specific details about the outcome and the impact of the explanation on the team or project.",
+      "weak_topics": [
+        "outcome measurement",
+        "project impact"
+      ],
+      "critique": "The candidate's explanation is straightforward, but lacks depth and specific metrics to demonstrate the effectiveness of their approach.",
+      "rewrite": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like 'ranking preferences like sorting favorites.' I avoided jargon, used a quick visual flow, and tied it to business outcomes, such as 'increasing user engagement by 25%.' I also paused to confirm understanding, which made the explanation clear and easy to follow. As a result, my teammate was able to provide valuable feedback and contribute to the project's success, ultimately leading to a 30% increase in sales."
+    },
+    {
+      "question": "Tell me about a time when you had to communicate the outcome and impact of a technical project, such as a software development or data analysis project, to a non-technical team or stakeholders. How did you approach the communication, and what strategies did you use to ensure your message was understood and the outcome was measured effectively?",
+      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
+      "score": 7,
+      "persona": "recruiter",
+      "focus_area": "outcome measurement and communication skills",
+      "feedback": "The candidate provided a specific example from their experience and highlighted key strategies for effective communication, such as using analogies and avoiding jargon. However, the answer could be stronger with more detail on the project's outcome and impact, as well as more nuanced strategies for ensuring understanding and measuring effectiveness.",
+      "weak_topics": [
+        "providing specific metrics or outcomes",
+        "describing a more complex project scenario"
+      ],
+      "critique": "The answer is concise but lacks depth in describing the project's outcome and the strategies used to measure its impact. It would be more effective to provide specific examples of how the communication approach led to desired outcomes.",
+      "rewrite": "In my Datathon, I had to explain a complex recommendation algorithm to a non-technical teammate. I approached this by using relatable analogies, such as comparing ranking preferences to sorting favorites, and avoided technical jargon. To ensure clarity, I utilized a simple visual flow and tied the explanation to tangible business outcomes, like increased user engagement. I also regularly paused to confirm understanding and incorporated feedback, which resulted in a clear and actionable explanation that my teammate could easily grasp and apply to our project goals."
+    },
+    {
+      "question": "Tell me about a time when you had to communicate the outcome and impact of a technical project to a non-technical team or stakeholders. How did you approach the communication, and what strategies did you use to ensure your message was understood and the outcome was measured effectively?",
+      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
+      "score": 7,
+      "persona": "hiring_manager",
+      "focus_area": "outcome measurement and communication skills",
+      "feedback": "The candidate provided a specific example from their experience and highlighted key strategies for effective communication, such as using analogies and avoiding jargon. However, the answer could be stronger with more detail on the outcome and impact of the project, as well as specific metrics or results.",
+      "weak_topics": [
+        "providing metrics or results",
+        "describing project outcome and impact"
+      ],
+      "critique": "The answer is a good start, but lacks concrete details on the project's outcome and how it was measured, which is crucial for stakeholders.",
+      "rewrite": "In my Datathon, I had to explain a complex recommendation algorithm to a non-technical teammate. I used simple analogies like 'ranking preferences like sorting favorites' and avoided technical jargon to ensure clarity. By tying the explanation to business outcomes, such as 'increasing user engagement by 25%', and using a quick visual flow, I helped my teammate understand the project's impact. I also regularly paused to confirm understanding, which made the explanation clear and easy to follow. As a result, we were able to implement the algorithm effectively, resulting in a 30% increase in sales."
     }
   ]
 }
