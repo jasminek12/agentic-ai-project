@@ -7,7 +7,7 @@
 Backend MVP for:
 
 - Resume tailoring and **PDF download** (`POST /tailor-resume`)
-- Adaptive interview simulation (`behavioral` / `technical`) with **per-session memory** (`POST /start-interview`, `POST /submit-answer`)
+- Adaptive interview simulation (`behavioral` / `technical`) with **per-session memory** and explicit follow-up branching (`POST /start-interview`, `POST /submit-answer`, `POST /advance-interview`)
 - **Professional outreach** drafts via Groq (`POST /frame-message`)
 
 The React frontend in `job-agent-frontend/` calls these endpoints. The UI **falls back** to a local template if `/frame-message` fails (e.g. network or 502).
@@ -108,7 +108,7 @@ The frontend typically uses `fetch` + `response.blob()` and triggers a browser d
 
 ### 2) `POST /start-interview`
 
-Starts (or resets) an interview for a given **`session_id`** and returns the first question.
+Starts (or resets) an interview for a given **`session_id`** and returns the first question plus run metadata.
 
 **Request** (`application/json`):
 
@@ -117,7 +117,12 @@ Starts (or resets) an interview for a given **`session_id`** and returns the fir
   "mode": "behavioral",
   "session_id": "user_123_session_1",
   "job_description": "Hiring backend engineer with FastAPI and PostgreSQL.",
-  "resume": "Backend engineer with 3 years experience building APIs..."
+  "resume": "Backend engineer with 3 years experience building APIs...",
+  "panel_mode": true,
+  "pressure_round": false,
+  "company_context": "B2B fintech platform with strict SLA goals.",
+  "role_context": "Backend Engineer II on platform reliability.",
+  "interview_date": "2026-05-02"
 }
 ```
 
@@ -128,7 +133,9 @@ Starts (or resets) an interview for a given **`session_id`** and returns the fir
 
 ```json
 {
-  "question": "Tell me about a time you handled a difficult stakeholder."
+  "question": "Tell me about a time you handled a difficult stakeholder.",
+  "interview_started": true,
+  "target_question_count": 7
 }
 ```
 
@@ -136,7 +143,9 @@ Starts (or resets) an interview for a given **`session_id`** and returns the fir
 
 ### 3) `POST /submit-answer`
 
-Submits an answer for the **current open question** for the given `session_id`, then returns score, feedback, and the **next** question.
+Submits an answer for the **current open question** for the given `session_id`.
+For in-progress sessions it returns score/feedback plus a **pending decision** between follow-up and next main question.
+For completed sessions it returns final evaluation artifacts.
 
 **Request** (`application/json`):
 
@@ -153,15 +162,52 @@ Submits an answer for the **current open question** for the given `session_id`, 
 {
   "score": 7,
   "feedback": "Strong communication details; include measurable outcomes.",
-  "next_question": "How would you optimize a slow API endpoint?"
+  "next_question": "How would you optimize a slow API endpoint?",
+  "follow_up_question": "Can you quantify the business impact of your communication changes?",
+  "waiting_for_next_step": true,
+  "interview_complete": false,
+  "critique": "Clear structure, but impact details are light.",
+  "rewrite": "In this project, I aligned weekly updates to stakeholder goals...",
+  "debrief_actions": [],
+  "next_round_target": "",
+  "curriculum_plan": [],
+  "weak_topic_memory": ["quantification", "depth"],
+  "final_evaluation": ""
 }
 ```
+
+On completion, `interview_complete` becomes `true` and final fields are populated (`final_evaluation`, `debrief_actions`, `next_round_target`, `curriculum_plan`).
 
 You must call `/start-interview` for that `session_id` before `/submit-answer`.
 
 ---
 
-### 4) `POST /frame-message`
+### 4) `POST /advance-interview`
+
+Commits the candidate's branch choice after `/submit-answer` returns `waiting_for_next_step=true`.
+
+**Request** (`application/json`):
+
+```json
+{
+  "session_id": "user_123_session_1",
+  "choice": "follow_up"
+}
+```
+
+`choice` must be `"follow_up"` or `"next_question"`.
+
+**Response** (`application/json`):
+
+```json
+{
+  "question": "Can you quantify the business impact of your communication changes?"
+}
+```
+
+---
+
+### 5) `POST /frame-message`
 
 Generates a recruiter- or hiring-manager-ready message (email or LinkedIn style) using the **Groq** LLM.
 

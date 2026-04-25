@@ -43,7 +43,7 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
 | **Welcome**               | Collects display name; optional `localStorage`                           | Frontend only                                           |
 | **Tailor resume**         | Paste resume + JD → download tailored **PDF**                            | `POST /tailor-resume`                                   |
-| **Interview simulator**   | Adaptive Q&A with optional panel mode, pressure rounds, critique + rewrite, debrief actions, and weak-spot curriculum | `POST /start-interview`, `POST /submit-answer`          |
+| **Interview simulator**   | Adaptive Q&A with explicit follow-up/next branching, optional panel/pressure modes, and end-of-session evaluation flow | `POST /start-interview`, `POST /submit-answer`, `POST /advance-interview`          |
 | **Professional outreach** | Purpose, channel, tone, context → LLM draft + copy                       | `POST /frame-message` (fallback: browser templates)     |
 | **Agent-style dashboard** | Progress, insights, goals, weak-area memory, plan timelines (agentic UX) | Mostly **frontend**; interview scores/feedback from API |
 
@@ -198,7 +198,7 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
 |             |                                                                                                                   |
 | ----------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Body**    | JSON: `{ "mode": "behavioral" | "technical", "session_id": string, "job_description": string, "resume": string, "panel_mode"?: bool, "pressure_round"?: bool, "company_context"?: string, "role_context"?: string, "interview_date"?: "YYYY-MM-DD" }` |
-| **Success** | JSON: `{ "question": string }`                                                                                    |
+| **Success** | JSON: `{ "question": string, "interview_started": true, "target_question_count": number }`                      |
 | **Notes**   | Resets server-side memory for that `session_id` and generates the first question.                                 |
 
 
@@ -219,8 +219,8 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
 |             |                                                                          |
 | ----------- | ------------------------------------------------------------------------ |
 | **Body**    | JSON: `{ "session_id": string, "answer": string }`                       |
-| **Success** | JSON includes score/feedback/next question plus `follow_up_question`, `critique`, `rewrite`, `debrief_actions`, `next_round_target`, and `curriculum_plan`. |
-| **Notes**   | Call `/start-interview` for that `session_id` first.                     |
+| **Success** | JSON always includes score/feedback/critique/rewrite and decision metadata. During interview it returns `waiting_for_next_step=true` plus both `follow_up_question` and `next_question`. On completion it returns `interview_complete=true` plus final outputs (`final_evaluation`, `debrief_actions`, `next_round_target`, `curriculum_plan`). |
+| **Notes**   | Call `/start-interview` first, then `/submit-answer`, then `/advance-interview` if `waiting_for_next_step=true`. |
 
 
 **Example request:**
@@ -231,6 +231,16 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
   "answer": "I used a structured communication plan and weekly demos..."
 }
 ```
+
+### `POST /advance-interview`
+
+
+|             |                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------- |
+| **Body**    | JSON: `{ "session_id": string, "choice": "follow_up" | "next_question" }`                         |
+| **Success** | JSON: `{ "question": string }`                                                                     |
+| **Notes**   | Required only when `/submit-answer` returns `waiting_for_next_step=true`; commits selected branch. |
+
 
 ### `POST /frame-message`
 
