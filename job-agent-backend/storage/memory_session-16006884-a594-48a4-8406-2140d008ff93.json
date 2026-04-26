@@ -1,161 +1,75 @@
 {
-  "mode": "behavioral",
+  "mode": "technical",
   "job_description": "Job Description\n\nQuaker Houghton invites you to apply for an internship located in Conshohocken, PA. This internship is designed to provide you with a positive work/training experience and challenging objectives.\n\nAs a Software Developer Intern for QH Fluid Intelligence and R&D Platforms, you’ll be part of our diverse global team making a significant impact on our organization. You will use your analytical thinking skills combined with your experience in applying design patterns and best practices, structured and disciplined development processes and engineering principles to developing robust, scalable and maintainable solutions that are user friendly and support business priorities.\n\nOur FI products are installed and used by factories that uses metals, forms and deforms metals by forging, forming, cutting, fabrication including automobiles to beverage cans that you use every day. You will analyze, design, program, debug, modify, test and implement software used in local, networked, cloud-based IoT Devices and connected applications for Fluid Intelligence.\n\nHow you will do it:\n\n This will be a full-time Summer 2026 internship running from May to August\n Hybrid position – at least 3 days a week in Conshohocken PA office\n Tasked with a specific project In Fluid Intelligence or R&D Software Applications\n Assist with Software Development using Python, C/C++, JavaScript, IoT connectivity, Data analysis and exploration etc. \n Participate in the Future Leaders Internship Programming events that include but are not limited to professional development sessions, 4-week Innovation Challenge and special events\n\nWhat we look for\n\nRequired Qualifications:\n\n Currently enrolled as a full-time student at an accredited U.S. college or university\n Pursuing a degree in Computer Science, Software Engineering/Design\n U.S. citizen or legal right to work in the U.S. \n\nPreferred Qualifications:\n\n Demonstrates an ability to learn quickly and independently\n Strong communication skills (verbal and written) preferred\n Demonstrated problem solving skills required",
   "resume": "Berkeley, CA | (555) 123-4567 |  youremail@berkeley.edu  | Linkedin | website, and/or portfolio URL (optional)\n\nEducation\nUniversity of California, Berkeley\t                                                                                                                                                                      May 2026         \nBachelor of Arts in Data Science\t                                                                                                                                               GPA: ___/4.0 (optional)\n\nRelevant Coursework: Data Structures & Algorithms, Modern Statistical Prediction & Machine Learning, Principles & Techniques of Data Science, Data, Inference, & Decisions, and Human Contexts & Ethics of Data\n\n\nSkills\nLanguages: SQL, Python, R, Java\nDatabases: MySQL, SQLite\nMachine Learning: Scikit-learn, SAS\nTools: Pandas, Matplotlib, Tableau, Excel, BeautifulSoup\n\nHighlighted Experience and Projects\nData Analyst Intern, ABC Company, San Francisco, CA\t\t\t\t\t    \t      \t   Summer 2025      \nAnalyzed user engagement data using SQL and Python (Pandas, Matplotlib) to identify trends in app usage, providing insights that supported a 15% increase in user acquisition for high-value user segments\nDeveloped and implemented data cleaning procedures (Python) for a customer satisfaction survey dataset, leading to a 10% reduction in data processing time for future surveys\nCollaborated with software engineers to understand data storage structures and API functionalities, ensuring accurate data retrieval for analysis\n\n\nDatathon Project: Predicting Customer Churn for XYZ Company                                                                           \t               Spring 2025\nLed a team of 4 in the exploration of customer data, uncovering key trends and patterns related to churn\nGuided team in selecting machine learning algorithms using Scikit-learn for churn prediction; oversaw model training, evaluation, and hyperparameter tuning to optimize performance\nPrepared and delivered a final presentation to datathon judges, highlighting key findings and model performance (78% accuracy on unseen test data)\n\n\nProject: Fantasy Football Modeling, Course: Data and Decisions                                                                       \t                             Fall 2024  \nAggregated and prepped 5 years of NFL fantasy football projection data from 6 independent sources into a MySQL database\nBuilt a random forest model in SAS that improved projection accuracy by combining the disparate sources into one projection that outperformed the mean absolute error of the next best projection by 18%\n\n\nProject: Production Control, Course:  System and Analysis Design\t                                                                                          Spring 2024\nLed a team of five students in designing, coding, and implementing a SQL database\nEntered and updated information using the web scraping tool BeautifulSoup\nCompleted analysis and designed documentation with data flow diagrams, structural charts, process specifications, a data dictionary, and a user manual\n\n\nLeadership and Extracurricular Activities\nData Structures Undergraduate Student Instructor, UC Berkeley EECS Dept\t                                       Sept. 2024 - May 2025\nSupported biweekly sections of 100+ students to help reinforce core data structures concepts (e.g. asymptotics, linked lists, trees, searching/sorting algorithms, etc.)\nShaped course curriculum by developing relevant enrichment problems to help students master concepts\n\nCS Educator / Events Committee Member, Berkeley ANova\t                                                                             Sept. 2023 - May 2024\nImproved computer science education in under-resourced communities across the Bay Area\nTaught a weekly project-based after-school program at Bay Area middle schools",
-  "panel_mode": true,
+  "panel_mode": false,
   "pressure_round": false,
   "company_context": "",
-  "role_context": "",
+  "role_context": "SWE",
   "interview_date": "2026-04-30",
-  "panel_personas": [
-    "recruiter",
-    "hiring_manager",
-    "domain_expert"
-  ],
-  "panel_turn_index": 8,
+  "panel_personas": [],
+  "panel_turn_index": 2,
   "weak_topic_memory": [
-    "communication",
-    "storytelling",
-    "communication skills",
-    "technical explanation",
-    "stakeholder management",
-    "communication",
-    "problem-solving",
-    "context",
-    "outcome",
-    "context setting",
-    "outcome measurement",
-    "outcome measurement",
-    "project impact",
-    "providing specific metrics or outcomes",
-    "describing a more complex project scenario",
-    "providing metrics or results",
-    "describing project outcome and impact"
+    "JavaScript",
+    "Data Visualization",
+    "IoT Device Monitoring",
+    "JavaScript fundamentals",
+    "technical communication"
   ],
-  "target_question_count": 8,
-  "answered_count": 8,
+  "target_question_count": 2,
+  "answered_count": 2,
   "pending_next_step": {},
   "interview_complete": true,
   "history": [
     {
-      "question": "Tell me about a time when you had to collaborate with a team to solve a complex problem, such as the Datathon Project where you led a team to predict customer churn. How did you ensure that your team was working effectively together, and what was the outcome of your collaboration?",
+      "question": "Can you describe a scenario where you had to analyze and design a software solution for a real-world problem, such as predicting customer churn or optimizing production control, and how you applied design patterns and best practices to develop a robust and maintainable solution using languages like Python or Java?",
       "answer": "",
       "score": null,
       "persona": "recruiter",
-      "focus_area": "teamwork and leadership"
+      "focus_area": "Software Development, Design Patterns, and Problem-Solving"
     },
     {
-      "question": "Describe a situation where you had to communicate complex technical ideas to a non-technical audience, such as explaining your data analysis findings to stakeholders or presenting your project results to a panel. How did you approach the communication, and what strategies did you use to ensure your message was understood?",
-      "answer": ".",
-      "score": 0,
+      "question": "Can you walk me through a project where you had to collect and analyze data from various sources, and then use a programming language like Python to develop a data-driven solution, such as predicting user behavior or optimizing system performance, and how you ensured the solution was scalable, maintainable, and user-friendly?",
+      "answer": "",
+      "score": null,
       "persona": "recruiter",
-      "focus_area": "teamwork and communication",
-      "feedback": "The candidate did not provide a response to the question, which is a critical aspect of a behavioral interview. To effectively communicate complex technical ideas, it's essential to provide a specific example from past experience.",
-      "weak_topics": [
-        "communication",
-        "storytelling"
-      ],
-      "critique": "The candidate failed to provide a concrete example, making it impossible to assess their ability to communicate technical ideas to a non-technical audience.",
-      "rewrite": "In my previous role, I had to present data analysis findings to a stakeholder group with limited technical background. I approached the communication by first understanding the stakeholders' needs and concerns, and then tailoring my message to focus on the key insights and recommendations. I used analogies, visual aids, and simple language to explain complex concepts, and provided examples to illustrate the practical applications of the findings. I also encouraged questions and feedback to ensure my message was understood, and adjusted my communication strategy accordingly."
+      "focus_area": "Data Analysis, Software Development, and Problem-Solving"
     },
     {
-      "question": "Tell me about a time when you had to explain a complex technical concept, such as a machine learning model or a software development project, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
-      "answer": "no clue",
+      "question": "How would you use Python to analyze sensor data from IoT devices in a manufacturing setting to detect anomalies in metal fabrication processes, and what libraries or frameworks would you use to implement this solution?",
+      "answer": "",
+      "score": null,
+      "persona": "interviewer",
+      "focus_area": "Data Analysis, IoT, and Anomaly Detection"
+    },
+    {
+      "question": "How would you use JavaScript to develop a real-time data visualization dashboard for monitoring the performance of IoT devices in a metal fabrication factory, and what libraries or frameworks would you use to implement this solution?",
+      "answer": "As a Software Developer Intern for QH Fluid Intelligence and R&D Platforms, you’ll be part of our diverse global team making a significant impact on our organization. You will use your analytical thinking skills combined with your experience in applying design patterns and best practices, structured and disciplined development processes and engineering principles to developing robust, scalable and maintainable solutions that are user friendly and support business priorities.\n\nOur FI products are installed and used by factories that uses metals, forms and deforms metals by forging, forming, cutting, fabrication including automobiles to beverage cans that you use every day. You will analyze, design, program, debug, modify, test and implement software used in local, networked, cloud-based IoT Devices and connected applications for Fluid Intelligence.",
+      "score": 2,
+      "persona": "interviewer",
+      "focus_area": "Data Visualization, IoT, and Real-time Monitoring",
+      "feedback": "The answer lacks clarity and technical depth. It does not address the question directly and fails to provide a clear plan for developing a real-time data visualization dashboard using JavaScript.",
+      "weak_topics": [
+        "JavaScript",
+        "Data Visualization",
+        "IoT Device Monitoring"
+      ],
+      "critique": "The answer appears to be a job description and does not provide any technical details or insights into how the candidate would approach the problem.",
+      "rewrite": "To develop a real-time data visualization dashboard for monitoring IoT devices in a metal fabrication factory using JavaScript, I would follow the STAR method. Situation: First, I would assess the factory's current IoT infrastructure and identify the key performance indicators (KPIs) to be monitored. Task: Next, I would design a dashboard that provides real-time visualizations of the KPIs using libraries such as D3.js or Chart.js. Action: I would use JavaScript frameworks like React or Angular to build the dashboard, and utilize WebSockets or WebRTC to establish real-time communication with the IoT devices. Result: Finally, I would test and deploy the dashboard, ensuring it provides actionable insights for factory operators to optimize production and maintenance. I would also consider using libraries like Node-RED for IoT device management and integration."
+    },
+    {
+      "question": "What is the difference between null and undefined in JavaScript?",
+      "answer": "As a Software Developer Intern for QH Fluid Intelligence and R&D Platforms, you’ll be part of our diverse global team making a significant impact on our organization. You will use your analytical thinking skills combined with your experience in applying design patterns and best practices, structured and disciplined development processes and engineering principles to developing robust, scalable and maintainable solutions that are user friendly and support business priorities.\n\nOur FI products are installed and used by factories that uses metals, forms and deforms metals by forging, forming, cutting, fabrication including automobiles to beverage cans that you use every day. You will analyze, design, program, debug, modify, test and implement software used in local, networked, cloud-based IoT Devices and connected applications for Fluid Intelligence.",
       "score": 0,
-      "persona": "hiring_manager",
-      "focus_area": "communication and storytelling",
-      "feedback": "The candidate failed to provide a relevant example or any insight into their experience with explaining complex technical concepts to non-technical stakeholders. This lack of response indicates a potential gap in communication skills, a crucial aspect of working in a team environment.",
+      "persona": "interviewer",
+      "focus_area": "JavaScript Fundamentals",
+      "feedback": "The answer does not address the question about the difference between null and undefined in JavaScript. It appears to be a job description and does not provide any relevant technical information.",
       "weak_topics": [
-        "communication skills",
-        "technical explanation",
-        "stakeholder management"
+        "JavaScript fundamentals",
+        "technical communication"
       ],
-      "critique": "The answer does not address the question, showing a lack of preparation or experience in explaining technical concepts to non-technical audiences.",
-      "rewrite": "In my previous role, I had to explain a machine learning model to a marketing team. I approached this by first understanding their level of technical knowledge and then using analogies and visual aids to simplify the concept. I ensured my message was understood by asking for feedback and adjusting my explanation accordingly."
-    },
-    {
-      "question": "Tell me about a time when you had to explain a technical concept, such as a data structure or an algorithm, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
-      "answer": "im not sure",
-      "score": 0,
-      "persona": "domain_expert",
-      "focus_area": "communication skills",
-      "feedback": "The candidate's response lacks a specific example and explanation of how they approached the situation, making it difficult to assess their ability to communicate technical concepts effectively.",
-      "weak_topics": [
-        "communication",
-        "problem-solving"
-      ],
-      "critique": "The candidate failed to provide a concrete example, and their response does not demonstrate any understanding of strategies for explaining technical concepts to non-technical stakeholders.",
-      "rewrite": "In my previous role, I had to explain the concept of a hash table to a non-technical team member. I approached the explanation by using an analogy, comparing it to a phonebook where each name is associated with a phone number. I also used visual aids, such as diagrams, to help illustrate the concept. To ensure understanding, I asked questions throughout the explanation and provided examples of how hash tables are used in real-world applications."
-    },
-    {
-      "question": "Tell me about a time when you had to explain a complex technical concept, such as a machine learning model or a software development project, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
-      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
-      "score": 8,
-      "persona": "recruiter",
-      "focus_area": "communication skills",
-      "feedback": "The candidate provided a clear and concise example of explaining a complex technical concept to a non-technical team member. They effectively used analogies, avoided jargon, and incorporated visual aids to facilitate understanding. However, the answer could be improved by providing more specific details about the context and the outcome of the explanation.",
-      "weak_topics": [
-        "context",
-        "outcome"
-      ],
-      "critique": "The answer is brief and lacks specific details about the Datathon and the teammate's response to the explanation.",
-      "rewrite": "In my Datathon project, I had to explain a complex recommendation algorithm to a non-technical teammate who was responsible for presenting the results to stakeholders. I approached the explanation by using simple analogies, such as 'ranking preferences like sorting favorites,' and avoided using technical jargon. I also created a quick visual flow to illustrate how the algorithm worked and tied it to the business outcomes we were trying to achieve. To ensure understanding, I paused to confirm my teammate's comprehension and asked for feedback. As a result, my teammate was able to effectively communicate the results to the stakeholders, and we were able to implement the algorithm successfully."
-    },
-    {
-      "question": "Tell me about a time when you had to communicate a complex technical idea, such as a data analysis finding or a software development concept, to a non-technical audience, like stakeholders or a team without a technical background. How did you approach the communication, and what strategies did you use to ensure your message was understood?",
-      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
-      "score": 7,
-      "persona": "hiring_manager",
-      "focus_area": "communication skills",
-      "feedback": "The candidate provided a clear example of communicating a complex technical idea to a non-technical audience. However, the answer could be improved with more specific details about the context and the outcome of the communication.",
-      "weak_topics": [
-        "context setting",
-        "outcome measurement"
-      ],
-      "critique": "The answer is concise but lacks specific details about the Datathon, the teammate's background, and the impact of the explanation on the project or business outcomes.",
-      "rewrite": "In a recent Datathon project, I had to explain a complex recommendation algorithm to a non-technical teammate who was responsible for presenting our findings to stakeholders. To approach this, I used simple analogies like 'ranking preferences like sorting favorites' and avoided technical jargon. I also created a quick visual flow to illustrate the concept and tied it to specific business outcomes, such as increased customer engagement. Throughout the explanation, I paused to confirm understanding and asked for feedback, which helped ensure my message was clear and easy to follow. As a result, my teammate was able to effectively communicate the concept to stakeholders, and we were able to implement the algorithm, leading to a significant improvement in customer satisfaction."
-    },
-    {
-      "question": "Tell me about a time when you had to explain a complex technical concept, such as a machine learning model or a software development project, to a non-technical team member or stakeholder. How did you approach the explanation, and what strategies did you use to ensure your message was understood?",
-      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
-      "score": 8,
-      "persona": "domain_expert",
-      "focus_area": "communication skills",
-      "feedback": "The candidate provided a clear and concise example of explaining a complex technical concept to a non-technical team member. They effectively used analogies, avoided jargon, and incorporated visual aids to facilitate understanding. However, the answer could be improved with more specific details about the outcome and the impact of the explanation on the team or project.",
-      "weak_topics": [
-        "outcome measurement",
-        "project impact"
-      ],
-      "critique": "The candidate's explanation is straightforward, but lacks depth and specific metrics to demonstrate the effectiveness of their approach.",
-      "rewrite": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like 'ranking preferences like sorting favorites.' I avoided jargon, used a quick visual flow, and tied it to business outcomes, such as 'increasing user engagement by 25%.' I also paused to confirm understanding, which made the explanation clear and easy to follow. As a result, my teammate was able to provide valuable feedback and contribute to the project's success, ultimately leading to a 30% increase in sales."
-    },
-    {
-      "question": "Tell me about a time when you had to communicate the outcome and impact of a technical project, such as a software development or data analysis project, to a non-technical team or stakeholders. How did you approach the communication, and what strategies did you use to ensure your message was understood and the outcome was measured effectively?",
-      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
-      "score": 7,
-      "persona": "recruiter",
-      "focus_area": "outcome measurement and communication skills",
-      "feedback": "The candidate provided a specific example from their experience and highlighted key strategies for effective communication, such as using analogies and avoiding jargon. However, the answer could be stronger with more detail on the project's outcome and impact, as well as more nuanced strategies for ensuring understanding and measuring effectiveness.",
-      "weak_topics": [
-        "providing specific metrics or outcomes",
-        "describing a more complex project scenario"
-      ],
-      "critique": "The answer is concise but lacks depth in describing the project's outcome and the strategies used to measure its impact. It would be more effective to provide specific examples of how the communication approach led to desired outcomes.",
-      "rewrite": "In my Datathon, I had to explain a complex recommendation algorithm to a non-technical teammate. I approached this by using relatable analogies, such as comparing ranking preferences to sorting favorites, and avoided technical jargon. To ensure clarity, I utilized a simple visual flow and tied the explanation to tangible business outcomes, like increased user engagement. I also regularly paused to confirm understanding and incorporated feedback, which resulted in a clear and actionable explanation that my teammate could easily grasp and apply to our project goals."
-    },
-    {
-      "question": "Tell me about a time when you had to communicate the outcome and impact of a technical project to a non-technical team or stakeholders. How did you approach the communication, and what strategies did you use to ensure your message was understood and the outcome was measured effectively?",
-      "answer": "In my Datathon, I explained a recommendation algorithm to a non-technical teammate by using simple analogies like “ranking preferences like sorting favorites.” I avoided jargon, used a quick visual flow, and tied it to business outcomes. I also paused to confirm understanding, which made the explanation clear and easy to follow.",
-      "score": 7,
-      "persona": "hiring_manager",
-      "focus_area": "outcome measurement and communication skills",
-      "feedback": "The candidate provided a specific example from their experience and highlighted key strategies for effective communication, such as using analogies and avoiding jargon. However, the answer could be stronger with more detail on the outcome and impact of the project, as well as specific metrics or results.",
-      "weak_topics": [
-        "providing metrics or results",
-        "describing project outcome and impact"
-      ],
-      "critique": "The answer is a good start, but lacks concrete details on the project's outcome and how it was measured, which is crucial for stakeholders.",
-      "rewrite": "In my Datathon, I had to explain a complex recommendation algorithm to a non-technical teammate. I used simple analogies like 'ranking preferences like sorting favorites' and avoided technical jargon to ensure clarity. By tying the explanation to business outcomes, such as 'increasing user engagement by 25%', and using a quick visual flow, I helped my teammate understand the project's impact. I also regularly paused to confirm understanding, which made the explanation clear and easy to follow. As a result, we were able to implement the algorithm effectively, resulting in a 30% increase in sales."
+      "critique": "The answer lacks technical accuracy and clarity. It fails to provide a clear distinction between null and undefined in JavaScript, which is a fundamental concept in the language.",
+      "rewrite": "In JavaScript, null and undefined are two distinct primitive values. Null represents the intentional absence of any object value, whereas undefined represents an uninitialized variable or a non-existent property. For example, a variable declared but not assigned a value will be undefined, whereas a variable explicitly assigned null will have a null value. This distinction is crucial in preventing and debugging errors in JavaScript applications."
     }
   ]
 }

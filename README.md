@@ -328,4 +328,3 @@ Add `storage/` patterns to `.gitignore` if you do not want runtime artifacts com
 
 - [Backend — setup, PDF vs JSON, CORS, notes](job-agent-backend/README.md)
 - [Frontend — scripts, `.env`, feature list](job-agent-frontend/README.md)
-

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.agents.interview_agent import (
     build_curriculum_plan,
@@ -12,16 +14,84 @@ from app.agents.interview_agent import (
 from app.schemas import (
     AdvanceInterviewRequest,
     AdvanceInterviewResponse,
+    DeleteInterviewSessionResponse,
     ErrorResponse,
     InterviewAnswerResponse,
+    InterviewSessionDetailResponse,
+    InterviewSessionListResponse,
     InterviewStartResponse,
     StartInterviewRequest,
     SubmitAnswerRequest,
 )
-from app.utils.memory import load_memory, reset_memory, save_memory
+from app.utils.memory import delete_memory, list_memory_sessions, load_memory, memory_exists, reset_memory, save_memory
 
 
 router = APIRouter(prefix="", tags=["interview"])
+
+
+@router.get(
+    "/interview-sessions",
+    response_model=InterviewSessionListResponse,
+    status_code=status.HTTP_200_OK,
+)
+def list_interview_sessions(limit: int = Query(default=30, ge=1, le=200)):
+    sessions = []
+    for item in list_memory_sessions()[:limit]:
+        session_id = str(item.get("session_id", "")).strip()
+        if not session_id:
+            continue
+        memory = load_memory(session_id)
+        updated_at_raw = float(item.get("updated_at", 0))
+        updated_at = (
+            datetime.fromtimestamp(updated_at_raw, tz=timezone.utc).isoformat().replace("+00:00", "Z")
+            if updated_at_raw > 0
+            else ""
+        )
+        sessions.append(
+            {
+                "session_id": session_id,
+                "mode": str(memory.get("mode", "")),
+                "answered_count": int(memory.get("answered_count", 0)),
+                "target_question_count": int(memory.get("target_question_count", 6)),
+                "interview_complete": bool(memory.get("interview_complete", False)),
+                "updated_at": updated_at,
+            }
+        )
+    return {"sessions": sessions}
+
+
+@router.get(
+    "/interview-sessions/{session_id}",
+    response_model=InterviewSessionDetailResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        404: {"model": ErrorResponse, "description": "Session not found."},
+    },
+)
+def get_interview_session(session_id: str):
+    if not session_id.strip():
+        raise HTTPException(status_code=400, detail={"error": "Session ID is required"})
+    if not memory_exists(session_id):
+        raise HTTPException(status_code=404, detail={"error": "Interview session not found"})
+    memory = load_memory(session_id)
+    return {"session_id": session_id, "memory": memory}
+
+
+@router.delete(
+    "/interview-sessions/{session_id}",
+    response_model=DeleteInterviewSessionResponse,
+    status_code=status.HTTP_200_OK,
+    responses={
+        404: {"model": ErrorResponse, "description": "Session not found."},
+    },
+)
+def remove_interview_session(session_id: str):
+    if not session_id.strip():
+        raise HTTPException(status_code=400, detail={"error": "Session ID is required"})
+    deleted = delete_memory(session_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail={"error": "Interview session not found"})
+    return {"deleted": True, "session_id": session_id}
 
 
 @router.post(
@@ -77,7 +147,8 @@ def start_interview(payload: StartInterviewRequest):
             ["recruiter", "hiring_manager", "domain_expert"] if payload.panel_mode else []
         )
         memory["panel_turn_index"] = 0
-        memory["target_question_count"] = estimate_question_count(payload.job_description, payload.mode)
+        estimated_question_count = estimate_question_count(payload.job_description, payload.mode)
+        memory["target_question_count"] = int(payload.target_question_count or estimated_question_count)
         memory["answered_count"] = 0
         memory["pending_next_step"] = {}
         memory["interview_complete"] = False

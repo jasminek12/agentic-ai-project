@@ -1,6 +1,6 @@
 import json
 import re
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from app.config import STORAGE_DIR
 
@@ -28,6 +28,38 @@ DEFAULT_MEMORY: Dict[str, Any] = {
 def _memory_file_path(session_id: str):
     safe_session_id = re.sub(r"[^a-zA-Z0-9_-]", "_", session_id)
     return STORAGE_DIR / f"memory_{safe_session_id}.json"
+
+
+def memory_exists(session_id: str) -> bool:
+    memory_file = _memory_file_path(session_id)
+    return memory_file.exists()
+
+
+def delete_memory(session_id: str) -> bool:
+    memory_file = _memory_file_path(session_id)
+    if not memory_file.exists():
+        return False
+    memory_file.unlink()
+    return True
+
+
+def list_memory_sessions() -> List[Dict[str, Any]]:
+    STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    sessions: List[Dict[str, Any]] = []
+    for memory_file in STORAGE_DIR.glob("memory_*.json"):
+        session_id = memory_file.stem.replace("memory_", "", 1)
+        try:
+            stat = memory_file.stat()
+            sessions.append(
+                {
+                    "session_id": session_id,
+                    "updated_at": stat.st_mtime,
+                }
+            )
+        except OSError:
+            continue
+    sessions.sort(key=lambda item: float(item.get("updated_at", 0)), reverse=True)
+    return sessions
 
 
 def load_memory(session_id: str) -> Dict[str, Any]:

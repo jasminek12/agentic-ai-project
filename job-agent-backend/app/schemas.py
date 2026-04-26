@@ -74,6 +74,13 @@ class StartInterviewRequest(BaseModel):
         description="Optional interview date in YYYY-MM-DD format for curriculum planning.",
         example="2026-05-02",
     )
+    target_question_count: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=20,
+        description="Optional custom question count override. If omitted, the agent estimates it from the role context.",
+        example=6,
+    )
 
 
 class StartInterviewResponse(BaseModel):
@@ -223,3 +230,26 @@ class InterviewMemory(BaseModel):
     pending_next_step: Dict[str, str] = Field(default_factory=dict)
     interview_complete: bool = False
     history: List[InterviewHistoryItem] = Field(default_factory=list)
+
+
+class InterviewSessionListItem(BaseModel):
+    session_id: str = Field(..., example="session-12")
+    mode: str = Field(default="", example="behavioral")
+    answered_count: int = Field(default=0, ge=0, example=3)
+    target_question_count: int = Field(default=6, ge=1, example=6)
+    interview_complete: bool = Field(default=False, example=False)
+    updated_at: str = Field(default="", example="2026-04-26T20:30:00Z")
+
+
+class InterviewSessionListResponse(BaseModel):
+    sessions: List[InterviewSessionListItem] = Field(default_factory=list)
+
+
+class InterviewSessionDetailResponse(BaseModel):
+    session_id: str = Field(..., example="session-12")
+    memory: InterviewMemory
+
+
+class DeleteInterviewSessionResponse(BaseModel):
+    deleted: bool = Field(default=True, example=True)
+    session_id: str = Field(..., example="session-12")

@@ -7,7 +7,7 @@
 Backend MVP for:
 
 - Resume tailoring and **PDF download** (`POST /tailor-resume`)
-- Adaptive interview simulation (`behavioral` / `technical`) with **per-session memory** and explicit follow-up branching (`POST /start-interview`, `POST /submit-answer`, `POST /advance-interview`)
+- Adaptive interview simulation (`behavioral` / `technical`) with **per-session memory** and explicit follow-up branching (`POST /start-interview`, `POST /submit-answer`, `POST /advance-interview`) plus session management endpoints (`GET /interview-sessions`, `GET /interview-sessions/{session_id}`, `DELETE /interview-sessions/{session_id}`)
 - **Professional outreach** drafts via Groq (`POST /frame-message`)
 
 The React frontend in `job-agent-frontend/` calls these endpoints. The UI **falls back** to a local template if `/frame-message` fails (e.g. network or 502).
@@ -204,6 +204,19 @@ Commits the candidate's branch choice after `/submit-answer` returns `waiting_fo
   "question": "Can you quantify the business impact of your communication changes?"
 }
 ```
+
+---
+
+### Session Management
+
+Use these when the client needs to resume, inspect, or clear saved interview runs.
+
+- `GET /interview-sessions?limit=30`  
+  Returns recent sessions with mode, answered count, target count, completion state, and last update time.
+- `GET /interview-sessions/{session_id}`  
+  Returns the full persisted interview memory snapshot for that session.
+- `DELETE /interview-sessions/{session_id}`  
+  Deletes one persisted session file.
 
 ---
 
