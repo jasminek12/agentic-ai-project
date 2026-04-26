@@ -1519,6 +1519,24 @@ button.button--topbar-ghost:hover:not(:disabled),
   min-width: 140px;
 }
 
+.rewrite-audio-icon-btn {
+  min-width: 2.2rem;
+  padding: 0.45rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.interview-history-toggle {
+  min-width: 2.3rem;
+  padding: 0.45rem 0.6rem;
+}
+
+.interview-history-panel {
+  margin-bottom: 0.95rem;
+}
+
 .next-step-card {
   border: 1px solid var(--pm-border, rgba(10, 37, 64, 0.09));
   border-radius: var(--pm-radius-sm, 10px);

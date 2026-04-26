@@ -494,6 +494,7 @@ function App() {
   const [weakAreasMemory, setWeakAreasMemory] = useState([])
   const [interviewSessionsArchive, setInterviewSessionsArchive] = useState([])
   const [resumePromptAcknowledgedSessionId, setResumePromptAcknowledgedSessionId] = useState('')
+  const [interviewHistoryPanelOpen, setInterviewHistoryPanelOpen] = useState(false)
 
   const [outreachMessageType, setOutreachMessageType] = useState('follow_up')
   const [outreachChannel, setOutreachChannel] = useState('email')
@@ -1432,6 +1433,23 @@ function App() {
     Boolean(currentQuestion || waitingForNextStep || (answeredCount > 0 && !interviewComplete)) &&
     !interviewViewActive &&
     sessionId !== resumePromptAcknowledgedSessionId
+  const interviewTranscriptItems = useMemo(() => {
+    const historyItems = answerHistory.map((item) => ({
+      question: item.question || '',
+      answer: item.answer || '',
+      agentAnswer: item.rewrite || item.feedback || '',
+      answeredAt: item.answeredAt || '',
+    }))
+    if (currentQuestion && !historyItems.some((item) => item.question === currentQuestion && !item.answer)) {
+      historyItems.unshift({
+        question: currentQuestion,
+        answer: '',
+        agentAnswer: '',
+        answeredAt: '',
+      })
+    }
+    return historyItems
+  }, [answerHistory, currentQuestion])
   const agentLiveStatus = useMemo(() => {
     if (activeTab === 'resume') {
       if (isTailoring) {
@@ -1703,6 +1721,7 @@ function App() {
     setNextRoundTarget('')
     setCurriculumPlan([])
     setResumePromptAcknowledgedSessionId('')
+    setInterviewHistoryPanelOpen(false)
     const id = createSessionId()
     setSessionId(id)
     try {
@@ -1712,14 +1731,76 @@ function App() {
     }
   }
 
-  const handleLoadArchivedSession = (archivedSessionId) => {
-    if (!archivedSessionId) {
+  const handleContinueInterviewSession = async (targetSessionId = sessionId) => {
+    if (!targetSessionId.trim()) {
+      setInterviewError('Session ID is required to continue.')
       return
     }
-    setSessionId(archivedSessionId)
-    setActiveTab('interview')
-    setResumePromptAcknowledgedSessionId('')
-    setAccountMenuOpen(false)
+    setInterviewError('')
+    try {
+      const response = await fetch(`${API_BASE_URL}/interview-sessions/${encodeURIComponent(targetSessionId)}`)
+      if (!response.ok) {
+        const message = await readErrorMessage(response, 'Failed to load interview session.')
+        throw new Error(message)
+      }
+      const data = await response.json()
+      const memory = data?.memory || {}
+      const memoryHistory = Array.isArray(memory.history) ? memory.history : []
+      const pending = memory.pending_next_step && typeof memory.pending_next_step === 'object' ? memory.pending_next_step : {}
+      const lastAnswered = [...memoryHistory].reverse().find((item) => item && item.answer)
+      const pendingItem = [...memoryHistory].reverse().find((item) => item && !item.answer)
+      const questions = memoryHistory
+        .map((item) => (typeof item?.question === 'string' ? item.question : ''))
+        .filter(Boolean)
+        .slice(-40)
+      const mappedAnswerHistory = [...memoryHistory]
+        .reverse()
+        .filter((item) => item && item.answer)
+        .map((item) => ({
+          question: item.question || '',
+          answer: item.answer || '',
+          score: typeof item.score === 'number' ? item.score : null,
+          feedback: item.feedback || '',
+          rewrite: item.rewrite || '',
+          answeredAt: item.answeredAt || '',
+        }))
+        .slice(0, 8)
+
+      setSessionId(targetSessionId)
+      setMode(memory.mode === 'technical' ? 'technical' : 'behavioral')
+      setInterviewJobDescription(typeof memory.job_description === 'string' ? memory.job_description : '')
+      setInterviewResume(typeof memory.resume === 'string' ? memory.resume : '')
+      setPanelModeEnabled(Boolean(memory.panel_mode))
+      setPressureRoundEnabled(Boolean(memory.pressure_round))
+      setCompanyContext(typeof memory.company_context === 'string' ? memory.company_context : '')
+      setRoleContext(typeof memory.role_context === 'string' ? memory.role_context : '')
+      setInterviewDate(typeof memory.interview_date === 'string' ? memory.interview_date : '')
+      setQuestionTrail(questions)
+      setQuestionTrailIndex(Math.max(0, questions.length - 1))
+      setCurrentQuestion(typeof pendingItem?.question === 'string' ? pendingItem.question : '')
+      setCurrentAnswer('')
+      setAnswerHistory(mappedAnswerHistory)
+      setAnsweredCount(Number(memory.answered_count) || mappedAnswerHistory.length)
+      setTargetQuestionCount(Number(memory.target_question_count) || 0)
+      setInterviewComplete(Boolean(memory.interview_complete))
+      setWaitingForNextStep(Boolean(pending.follow_up_question || pending.next_question))
+      setLatestFollowUpQuestion(typeof pending.follow_up_question === 'string' ? pending.follow_up_question : '')
+      setPendingNextQuestion(typeof pending.next_question === 'string' ? pending.next_question : '')
+      setLastScore(typeof lastAnswered?.score === 'number' ? lastAnswered.score : null)
+      setLastFeedback(typeof lastAnswered?.feedback === 'string' ? lastAnswered.feedback : '')
+      setLatestCritique(typeof lastAnswered?.critique === 'string' ? lastAnswered.critique : '')
+      setLatestRewrite(typeof lastAnswered?.rewrite === 'string' ? lastAnswered.rewrite : '')
+      setFinalEvaluation(typeof memory.final_evaluation === 'string' ? memory.final_evaluation : '')
+      setInterviewStage(Boolean(memory.interview_complete) ? 'completed' : 'session')
+      setInterviewStatusMessage('Resumed from saved session.')
+      setResumePromptAcknowledgedSessionId(targetSessionId)
+      setInterviewHistoryPanelOpen(false)
+      setInterviewViewActive(true)
+      setActiveTab('interview')
+      setAccountMenuOpen(false)
+    } catch (error) {
+      setInterviewError(error.message || 'Failed to load interview session.')
+    }
   }
 
   const handlePauseInterviewToDashboard = () => {
@@ -1729,6 +1810,7 @@ function App() {
     setIsRewriteSpeaking(false)
     setIsRewritePaused(false)
     setInterviewViewActive(false)
+    setInterviewHistoryPanelOpen(false)
     setInterviewStatusMessage('Session paused. You can continue this interview from the dashboard.')
     goToTab('resume')
   }
@@ -1960,8 +2042,8 @@ function App() {
       evaluationTimerRef.current = null
     }
 
-    if (!interviewJobDescription.trim() || !interviewResume.trim() || !sessionId.trim()) {
-      setInterviewError('Mode, session ID, job description, and resume are required.')
+    if (!interviewJobDescription.trim() || !interviewResume.trim()) {
+      setInterviewError('Mode, job description, and resume are required.')
       return
     }
     if (questionCountMode === 'custom') {
@@ -1972,11 +2054,22 @@ function App() {
       }
     }
 
+    const hasInProgressSession = Boolean(
+      currentQuestion || waitingForNextStep || (answeredCount > 0 && !interviewComplete)
+    )
+    const effectiveSessionId = hasInProgressSession ? sessionId.trim() : createSessionId()
+    setSessionId(effectiveSessionId)
+    try {
+      window.localStorage.setItem(SESSION_ID_KEY, effectiveSessionId)
+    } catch {
+      // Ignore.
+    }
+
     setIsStartingInterview(true)
     try {
       const requestPayload = {
         mode,
-        session_id: sessionId,
+        session_id: effectiveSessionId,
         job_description: interviewJobDescription,
         resume: interviewResume,
         panel_mode: panelModeEnabled,
@@ -2006,12 +2099,12 @@ function App() {
       setInterviewStatusMessage(data.interview_started ? 'Interview started.' : '')
       setInterviewStage('session')
       setTargetQuestionCount(data.target_question_count || 0)
-      setResumePromptAcknowledgedSessionId(sessionId)
+      setResumePromptAcknowledgedSessionId(effectiveSessionId)
       if (currentUsername) {
         setInterviewSessionsArchive((prev) => {
           const nextUpdatedAt = new Date().toISOString()
           const nextArchive = [...prev]
-          const existingIndex = nextArchive.findIndex((session) => session.sessionId === sessionId)
+          const existingIndex = nextArchive.findIndex((session) => session.sessionId === effectiveSessionId)
           if (existingIndex >= 0) {
             const existing = nextArchive[existingIndex]
             nextArchive[existingIndex] = {
@@ -2023,7 +2116,7 @@ function App() {
             }
           } else {
             nextArchive.unshift({
-              sessionId,
+              sessionId: effectiveSessionId,
               mode,
               startedAt: nextUpdatedAt,
               updatedAt: nextUpdatedAt,
@@ -2243,7 +2336,7 @@ function App() {
     [latestRewrite]
   )
 
-  const handleToggleRewriteAudio = () => {
+  const handleRewritePlayAudio = () => {
     const speechSupported =
       typeof window !== 'undefined' &&
       'speechSynthesis' in window &&
@@ -2251,18 +2344,42 @@ function App() {
     if (!latestRewrite.trim() || !speechSupported || typeof window === 'undefined') {
       return
     }
-    if (!isRewriteSpeaking) {
-      setRewriteSpeechProgress(0)
-      startRewriteAudioFromProgress(0)
-      return
-    }
-    if (isRewritePaused) {
+    if (isRewriteSpeaking && isRewritePaused) {
       window.speechSynthesis.resume()
       setIsRewritePaused(false)
       return
     }
+    if (!isRewriteSpeaking) {
+      const startAt = rewriteSpeechProgress >= 99 ? 0 : rewriteSpeechProgress
+      startRewriteAudioFromProgress(startAt)
+    }
+  }
+
+  const handleRewritePauseAudio = () => {
+    const speechSupported =
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      typeof window.SpeechSynthesisUtterance !== 'undefined'
+    if (!latestRewrite.trim() || !speechSupported || typeof window === 'undefined') {
+      return
+    }
+    if (!isRewriteSpeaking || isRewritePaused) {
+      return
+    }
     window.speechSynthesis.pause()
     setIsRewritePaused(true)
+  }
+
+  const handleRewriteRestartAudio = () => {
+    const speechSupported =
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      typeof window.SpeechSynthesisUtterance !== 'undefined'
+    if (!latestRewrite.trim() || !speechSupported || typeof window === 'undefined') {
+      return
+    }
+    setRewriteSpeechProgress(0)
+    startRewriteAudioFromProgress(0)
   }
 
   const handleRewriteSeekChange = (event) => {
@@ -2278,12 +2395,6 @@ function App() {
       return
     }
     startRewriteAudioFromProgress(rewriteSpeechProgress)
-  }
-
-  const handleRewriteSkip = (delta) => {
-    const nextProgress = Math.max(0, Math.min(100, rewriteSpeechProgress + delta))
-    setRewriteSpeechProgress(nextProgress)
-    startRewriteAudioFromProgress(nextProgress)
   }
 
   const handleViewEvaluationResults = () => {
@@ -2488,6 +2599,16 @@ function App() {
           <div className="workspace-topbar__actions">
             <button
               type="button"
+              className="button button--topbar-ghost interview-history-toggle"
+              onClick={() => setInterviewHistoryPanelOpen((open) => !open)}
+              aria-expanded={interviewHistoryPanelOpen}
+              aria-controls="interview-history-panel"
+              aria-label="Open interview history panel"
+            >
+              <span aria-hidden="true">☰</span>
+            </button>
+            <button
+              type="button"
               className="button button--secondary"
               onClick={handlePauseInterviewToDashboard}
             >
@@ -2497,6 +2618,30 @@ function App() {
         </header>
         <main className="workspace-main" tabIndex={-1}>
           <div className="workspace-inner">
+            {interviewHistoryPanelOpen ? (
+              <aside id="interview-history-panel" className="question-card interview-history-panel">
+                <h3>Session Transcript</h3>
+                {interviewTranscriptItems.length > 0 ? (
+                  <ul className="history-list">
+                    {interviewTranscriptItems.map((item, index) => (
+                      <li key={`${item.question}-${index}`}>
+                        <p>
+                          <strong>Question:</strong> {item.question || 'No question captured.'}
+                        </p>
+                        <p>
+                          <strong>Your answer:</strong> {item.answer || 'Not answered yet.'}
+                        </p>
+                        <p>
+                          <strong>Agent answer:</strong> {item.agentAnswer || 'No suggested answer yet.'}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted">No transcript entries yet.</p>
+                )}
+              </aside>
+            ) : null}
             <section className="panel workspace-panel">
               <h2>Live Interview</h2>
               <div className="interview-meta-row">
@@ -2716,27 +2861,30 @@ function App() {
                     <div className="rewrite-audio-controls">
                       <button
                         type="button"
-                        className="button button--ghost"
+                        className="button button--ghost rewrite-audio-icon-btn"
                         disabled={!speechSupported}
-                        onClick={handleToggleRewriteAudio}
+                        onClick={handleRewritePlayAudio}
+                        aria-label="Play audio"
                       >
-                        {!isRewriteSpeaking ? 'Play' : isRewritePaused ? 'Resume' : 'Pause'}
+                        <span aria-hidden="true">{'>'}</span>
                       </button>
                       <button
                         type="button"
-                        className="button button--ghost"
+                        className="button button--ghost rewrite-audio-icon-btn"
                         disabled={!speechSupported}
-                        onClick={() => handleRewriteSkip(-10)}
+                        onClick={handleRewritePauseAudio}
+                        aria-label="Pause audio"
                       >
-                        -10s
+                        <span aria-hidden="true">||</span>
                       </button>
                       <button
                         type="button"
-                        className="button button--ghost"
+                        className="button button--ghost rewrite-audio-icon-btn"
                         disabled={!speechSupported}
-                        onClick={() => handleRewriteSkip(10)}
+                        onClick={handleRewriteRestartAudio}
+                        aria-label="Restart audio from beginning"
                       >
-                        +10s
+                        <span aria-hidden="true">🔊</span>
                       </button>
                       <input
                         type="range"
@@ -2877,7 +3025,7 @@ function App() {
                           <button
                             type="button"
                             className="button button--ghost"
-                            onClick={() => handleLoadArchivedSession(session.sessionId)}
+                            onClick={() => void handleContinueInterviewSession(session.sessionId)}
                           >
                             Open session
                           </button>
@@ -3160,7 +3308,7 @@ function App() {
                 <button
                   type="button"
                   className="button button--secondary"
-                  onClick={() => setResumePromptAcknowledgedSessionId(sessionId)}
+                  onClick={() => void handleContinueInterviewSession(sessionId)}
                 >
                   Continue session
                 </button>
@@ -3417,27 +3565,30 @@ function App() {
                     <div className="rewrite-audio-controls">
                       <button
                         type="button"
-                        className="button button--ghost"
+                        className="button button--ghost rewrite-audio-icon-btn"
                         disabled={!speechSupported}
-                        onClick={handleToggleRewriteAudio}
+                        onClick={handleRewritePlayAudio}
+                        aria-label="Play audio"
                       >
-                        {!isRewriteSpeaking ? 'Play' : isRewritePaused ? 'Resume' : 'Pause'}
+                        <span aria-hidden="true">{'>'}</span>
                       </button>
                       <button
                         type="button"
-                        className="button button--ghost"
+                        className="button button--ghost rewrite-audio-icon-btn"
                         disabled={!speechSupported}
-                        onClick={() => handleRewriteSkip(-10)}
+                        onClick={handleRewritePauseAudio}
+                        aria-label="Pause audio"
                       >
-                        -10s
+                        <span aria-hidden="true">||</span>
                       </button>
                       <button
                         type="button"
-                        className="button button--ghost"
+                        className="button button--ghost rewrite-audio-icon-btn"
                         disabled={!speechSupported}
-                        onClick={() => handleRewriteSkip(10)}
+                        onClick={handleRewriteRestartAudio}
+                        aria-label="Restart audio from beginning"
                       >
-                        +10s
+                        <span aria-hidden="true">🔊</span>
                       </button>
                       <input
                         type="range"
