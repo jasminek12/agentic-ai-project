@@ -5,6 +5,7 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.trim() || 'http://127.0.0.1:8000'
 
 const DRAFT_KEY = 'aih-workspace-draft'
+const INTERVIEW_ARCHIVE_KEY = 'aih-interview-archive'
 const SESSION_ID_KEY = 'aih-session-id'
 const SESSION_COUNTER_KEY = 'aih-session-counter'
 const ACCOUNT_KEY = 'aih-local-accounts-v2'
@@ -63,6 +64,72 @@ function findStoredAccount(username) {
 function getDraftStorageKey(username) {
   const normalized = normalizeUsername(username)
   return normalized ? `${DRAFT_KEY}-${normalized}` : DRAFT_KEY
+}
+
+function getInterviewArchiveStorageKey(username) {
+  const normalized = normalizeUsername(username)
+  return normalized ? `${INTERVIEW_ARCHIVE_KEY}-${normalized}` : INTERVIEW_ARCHIVE_KEY
+}
+
+function readInterviewArchive(username) {
+  if (typeof window === 'undefined') {
+    return []
+  }
+  try {
+    const raw = window.localStorage.getItem(getInterviewArchiveStorageKey(username))
+    if (!raw) {
+      return []
+    }
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      return []
+    }
+    return parsed
+      .filter((session) => session && typeof session === 'object' && typeof session.sessionId === 'string')
+      .map((session) => ({
+        sessionId: session.sessionId,
+        mode: session.mode === 'technical' ? 'technical' : 'behavioral',
+        startedAt: typeof session.startedAt === 'string' ? session.startedAt : '',
+        updatedAt: typeof session.updatedAt === 'string' ? session.updatedAt : '',
+        entries: Array.isArray(session.entries)
+          ? session.entries
+              .filter((entry) => entry && typeof entry === 'object')
+              .map((entry) => ({
+                question: typeof entry.question === 'string' ? entry.question : '',
+                answer: typeof entry.answer === 'string' ? entry.answer : '',
+                score: typeof entry.score === 'number' ? entry.score : null,
+                feedback: typeof entry.feedback === 'string' ? entry.feedback : '',
+                rewrite: typeof entry.rewrite === 'string' ? entry.rewrite : '',
+                answeredAt: typeof entry.answeredAt === 'string' ? entry.answeredAt : '',
+              }))
+          : [],
+      }))
+      .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+  } catch {
+    return []
+  }
+}
+
+function writeInterviewArchive(username, archive) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  try {
+    window.localStorage.setItem(getInterviewArchiveStorageKey(username), JSON.stringify(archive))
+  } catch {
+    // Ignore quota/storage failures.
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return ''
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  return date.toLocaleString()
 }
 
 function isValidTab(tab) {
@@ -384,6 +451,8 @@ function App() {
   const [interviewResume, setInterviewResume] = useState('')
   const [panelModeEnabled, setPanelModeEnabled] = useState(false)
   const [pressureRoundEnabled, setPressureRoundEnabled] = useState(false)
+  const [questionCountMode, setQuestionCountMode] = useState('agent')
+  const [customQuestionCount, setCustomQuestionCount] = useState('6')
   const [companyContext, setCompanyContext] = useState('')
   const [roleContext, setRoleContext] = useState('')
   const [interviewDate, setInterviewDate] = useState('')
@@ -409,6 +478,7 @@ function App() {
   const [latestCritique, setLatestCritique] = useState('')
   const [latestRewrite, setLatestRewrite] = useState('')
   const [isRewriteSpeaking, setIsRewriteSpeaking] = useState(false)
+  const [isRewritePaused, setIsRewritePaused] = useState(false)
   const [rewriteSpeechProgress, setRewriteSpeechProgress] = useState(0)
   const [debriefActions, setDebriefActions] = useState([])
   const [nextRoundTarget, setNextRoundTarget] = useState('')
@@ -422,6 +492,8 @@ function App() {
   const [goalSubtasks, setGoalSubtasks] = useState([])
   const [planPhase, setPlanPhase] = useState('idle')
   const [weakAreasMemory, setWeakAreasMemory] = useState([])
+  const [interviewSessionsArchive, setInterviewSessionsArchive] = useState([])
+  const [resumePromptAcknowledgedSessionId, setResumePromptAcknowledgedSessionId] = useState('')
 
   const [outreachMessageType, setOutreachMessageType] = useState('follow_up')
   const [outreachChannel, setOutreachChannel] = useState('email')
@@ -490,6 +562,12 @@ function App() {
       if (typeof iv.pressureRoundEnabled === 'boolean') {
         setPressureRoundEnabled(iv.pressureRoundEnabled)
       }
+      if (iv.questionCountMode === 'agent' || iv.questionCountMode === 'custom') {
+        setQuestionCountMode(iv.questionCountMode)
+      }
+      if (typeof iv.customQuestionCount === 'string') {
+        setCustomQuestionCount(iv.customQuestionCount)
+      }
       if (typeof iv.companyContext === 'string') {
         setCompanyContext(iv.companyContext)
       }
@@ -500,7 +578,7 @@ function App() {
         setInterviewDate(iv.interviewDate)
       }
       if (typeof iv.interviewViewActive === 'boolean') {
-        setInterviewViewActive(iv.interviewViewActive)
+        setInterviewViewActive(false)
       }
       if (typeof iv.interviewStatusMessage === 'string') {
         setInterviewStatusMessage(iv.interviewStatusMessage)
@@ -624,6 +702,8 @@ function App() {
     setInterviewResume('')
     setPanelModeEnabled(false)
     setPressureRoundEnabled(false)
+    setQuestionCountMode('agent')
+    setCustomQuestionCount('6')
     setCompanyContext('')
     setRoleContext('')
     setInterviewDate('')
@@ -649,10 +729,12 @@ function App() {
     setLatestCritique('')
     setLatestRewrite('')
     setIsRewriteSpeaking(false)
+    setIsRewritePaused(false)
     setRewriteSpeechProgress(0)
     setDebriefActions([])
     setNextRoundTarget('')
     setCurriculumPlan([])
+    setResumePromptAcknowledgedSessionId('')
     setAnswerHistory([])
     setInterviewError('')
     setGoalInput('')
@@ -760,6 +842,14 @@ function App() {
   }, [sessionId, hasEnteredName])
 
   useEffect(() => {
+    if (!hasEnteredName || !currentUsername) {
+      setInterviewSessionsArchive([])
+      return
+    }
+    setInterviewSessionsArchive(readInterviewArchive(currentUsername))
+  }, [currentUsername, hasEnteredName])
+
+  useEffect(() => {
     let alive = true
     const ac = new AbortController()
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -804,6 +894,8 @@ function App() {
           interviewResume,
           panelModeEnabled,
           pressureRoundEnabled,
+          questionCountMode,
+          customQuestionCount,
           companyContext,
           roleContext,
           interviewDate,
@@ -864,6 +956,8 @@ function App() {
     interviewResume,
     panelModeEnabled,
     pressureRoundEnabled,
+    questionCountMode,
+    customQuestionCount,
     companyContext,
     roleContext,
     interviewDate,
@@ -1330,6 +1424,14 @@ function App() {
     return nextPendingStep ? nextPendingStep.label : 'All core steps are complete.'
   }, [activitySteps])
   const topInsights = useMemo(() => dynamicInsights.slice(0, 2), [dynamicInsights])
+  const currentSessionArchiveEntry = useMemo(
+    () => interviewSessionsArchive.find((session) => session.sessionId === sessionId) || null,
+    [interviewSessionsArchive, sessionId]
+  )
+  const shouldPromptToResumeInterview =
+    Boolean(currentQuestion || waitingForNextStep || (answeredCount > 0 && !interviewComplete)) &&
+    !interviewViewActive &&
+    sessionId !== resumePromptAcknowledgedSessionId
   const agentLiveStatus = useMemo(() => {
     if (activeTab === 'resume') {
       if (isTailoring) {
@@ -1569,6 +1671,7 @@ function App() {
       window.speechSynthesis.cancel()
     }
     setIsRewriteSpeaking(false)
+    setIsRewritePaused(false)
     setRewriteSpeechProgress(0)
     setInterviewError('')
     setLastScore(null)
@@ -1599,6 +1702,7 @@ function App() {
     setDebriefActions([])
     setNextRoundTarget('')
     setCurriculumPlan([])
+    setResumePromptAcknowledgedSessionId('')
     const id = createSessionId()
     setSessionId(id)
     try {
@@ -1606,6 +1710,27 @@ function App() {
     } catch {
       // Ignore.
     }
+  }
+
+  const handleLoadArchivedSession = (archivedSessionId) => {
+    if (!archivedSessionId) {
+      return
+    }
+    setSessionId(archivedSessionId)
+    setActiveTab('interview')
+    setResumePromptAcknowledgedSessionId('')
+    setAccountMenuOpen(false)
+  }
+
+  const handlePauseInterviewToDashboard = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    setIsRewriteSpeaking(false)
+    setIsRewritePaused(false)
+    setInterviewViewActive(false)
+    setInterviewStatusMessage('Session paused. You can continue this interview from the dashboard.')
+    goToTab('resume')
   }
 
   const handleTailorResume = async (event) => {
@@ -1805,6 +1930,7 @@ function App() {
       window.speechSynthesis.cancel()
     }
     setIsRewriteSpeaking(false)
+    setIsRewritePaused(false)
     setRewriteSpeechProgress(0)
     setInterviewError('')
     setLastScore(null)
@@ -1838,23 +1964,33 @@ function App() {
       setInterviewError('Mode, session ID, job description, and resume are required.')
       return
     }
+    if (questionCountMode === 'custom') {
+      const parsedCount = Number.parseInt(customQuestionCount, 10)
+      if (!Number.isFinite(parsedCount) || parsedCount < 1 || parsedCount > 20) {
+        setInterviewError('Choose a custom question count between 1 and 20.')
+        return
+      }
+    }
 
     setIsStartingInterview(true)
     try {
+      const requestPayload = {
+        mode,
+        session_id: sessionId,
+        job_description: interviewJobDescription,
+        resume: interviewResume,
+        panel_mode: panelModeEnabled,
+        pressure_round: pressureRoundEnabled,
+        company_context: companyContext,
+        role_context: roleContext,
+        interview_date: interviewDate || null,
+        target_question_count:
+          questionCountMode === 'custom' ? Number.parseInt(customQuestionCount, 10) : undefined,
+      }
       const response = await fetch(`${API_BASE_URL}/start-interview`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mode,
-          session_id: sessionId,
-          job_description: interviewJobDescription,
-          resume: interviewResume,
-          panel_mode: panelModeEnabled,
-          pressure_round: pressureRoundEnabled,
-          company_context: companyContext,
-          role_context: roleContext,
-          interview_date: interviewDate || null,
-        }),
+        body: JSON.stringify(requestPayload),
       })
 
       if (!response.ok) {
@@ -1870,6 +2006,35 @@ function App() {
       setInterviewStatusMessage(data.interview_started ? 'Interview started.' : '')
       setInterviewStage('session')
       setTargetQuestionCount(data.target_question_count || 0)
+      setResumePromptAcknowledgedSessionId(sessionId)
+      if (currentUsername) {
+        setInterviewSessionsArchive((prev) => {
+          const nextUpdatedAt = new Date().toISOString()
+          const nextArchive = [...prev]
+          const existingIndex = nextArchive.findIndex((session) => session.sessionId === sessionId)
+          if (existingIndex >= 0) {
+            const existing = nextArchive[existingIndex]
+            nextArchive[existingIndex] = {
+              ...existing,
+              mode,
+              startedAt: existing.startedAt || nextUpdatedAt,
+              updatedAt: nextUpdatedAt,
+              entries: Array.isArray(existing.entries) ? existing.entries : [],
+            }
+          } else {
+            nextArchive.unshift({
+              sessionId,
+              mode,
+              startedAt: nextUpdatedAt,
+              updatedAt: nextUpdatedAt,
+              entries: [],
+            })
+          }
+          nextArchive.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+          writeInterviewArchive(currentUsername, nextArchive)
+          return nextArchive
+        })
+      }
     } catch (error) {
       setInterviewError(error.message || 'Failed to start interview.')
     } finally {
@@ -1907,6 +2072,7 @@ function App() {
         window.speechSynthesis.cancel()
       }
       setIsRewriteSpeaking(false)
+      setIsRewritePaused(false)
       setRewriteSpeechProgress(0)
       setLastScore(data.score ?? null)
       setLastFeedback(data.feedback ?? '')
@@ -1929,16 +2095,43 @@ function App() {
       setAnsweredCount(nextAnsweredCount)
       const detectedWeakAreas = computeWeakAreas(currentAnswer, data.feedback ?? '', data.score ?? null)
       setWeakAreasMemory((prev) => [...detectedWeakAreas, ...prev].slice(0, 40))
-      setAnswerHistory((prev) => [
-        {
-          question: currentQuestion,
-          answer: currentAnswer,
-          score: data.score ?? null,
-          feedback: data.feedback ?? '',
-          answeredAt: new Date().toLocaleTimeString(),
-        },
-        ...prev,
-      ])
+      const historyEntry = {
+        question: currentQuestion,
+        answer: currentAnswer,
+        score: data.score ?? null,
+        feedback: data.feedback ?? '',
+        rewrite: data.rewrite ?? '',
+        answeredAt: new Date().toLocaleTimeString(),
+      }
+      setAnswerHistory((prev) => [historyEntry, ...prev])
+      if (currentUsername) {
+        setInterviewSessionsArchive((prev) => {
+          const nextUpdatedAt = new Date().toISOString()
+          const nextArchive = [...prev]
+          const existingIndex = nextArchive.findIndex((session) => session.sessionId === sessionId)
+          if (existingIndex >= 0) {
+            const existing = nextArchive[existingIndex]
+            nextArchive[existingIndex] = {
+              ...existing,
+              mode,
+              startedAt: existing.startedAt || nextUpdatedAt,
+              updatedAt: nextUpdatedAt,
+              entries: [historyEntry, ...(Array.isArray(existing.entries) ? existing.entries : [])].slice(0, 80),
+            }
+          } else {
+            nextArchive.unshift({
+              sessionId,
+              mode,
+              startedAt: nextUpdatedAt,
+              updatedAt: nextUpdatedAt,
+              entries: [historyEntry],
+            })
+          }
+          nextArchive.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))
+          writeInterviewArchive(currentUsername, nextArchive)
+          return nextArchive
+        })
+      }
       if (derivedComplete) {
         setCurrentQuestion('')
         setInterviewStatusMessage('Interview simulation done.')
@@ -1947,7 +2140,7 @@ function App() {
         setInterviewStage('session')
         setInterviewStatusMessage('Choose your next step: follow-up question or next main question.')
       }
-      setCurrentAnswer('')
+      // Keep the submitted answer visible while review feedback is shown.
     } catch (error) {
       setInterviewError(error.message || 'Failed to submit answer.')
     } finally {
@@ -1984,6 +2177,7 @@ function App() {
           return updated
         })
       }
+      setCurrentAnswer('')
       setWaitingForNextStep(false)
       setLatestFollowUpQuestion('')
       setPendingNextQuestion('')
@@ -1997,25 +2191,16 @@ function App() {
     }
   }
 
-  const handleToggleRewriteAudio = () => {
-    const speechSupported =
-      typeof window !== 'undefined' &&
-      'speechSynthesis' in window &&
-      typeof window.SpeechSynthesisUtterance !== 'undefined'
-    if (!latestRewrite.trim() || !speechSupported || typeof window === 'undefined') {
-      return
-    }
-
-    const stopRewriteAudio = () => {
-      window.speechSynthesis.cancel()
-      setIsRewriteSpeaking(false)
-    }
-
-    const startRewriteAudioFromProgress = (progressValue) => {
-      const fullText = latestRewrite.trim()
-      if (!fullText) {
+  const startRewriteAudioFromProgress = useCallback(
+    (progressValue) => {
+      const speechSupported =
+        typeof window !== 'undefined' &&
+        'speechSynthesis' in window &&
+        typeof window.SpeechSynthesisUtterance !== 'undefined'
+      if (!latestRewrite.trim() || !speechSupported || typeof window === 'undefined') {
         return
       }
+      const fullText = latestRewrite.trim()
       const clampedProgress = Math.max(0, Math.min(100, progressValue))
       const rawStartIndex = Math.floor((clampedProgress / 100) * fullText.length)
       const boundedStart = Math.max(0, Math.min(fullText.length - 1, rawStartIndex))
@@ -2024,11 +2209,11 @@ function App() {
       if (!spokenSlice) {
         setRewriteSpeechProgress(100)
         setIsRewriteSpeaking(false)
+        setIsRewritePaused(false)
         return
       }
       const leadingTrimCount = rawSlice.length - spokenSlice.length
       rewriteSpeechOffsetRef.current = boundedStart + leadingTrimCount
-
       window.speechSynthesis.cancel()
       const utterance = new window.SpeechSynthesisUtterance(spokenSlice)
       utterance.rate = 1
@@ -2043,20 +2228,41 @@ function App() {
       }
       utterance.onend = () => {
         setIsRewriteSpeaking(false)
+        setIsRewritePaused(false)
         setRewriteSpeechProgress(100)
       }
-      utterance.onerror = () => setIsRewriteSpeaking(false)
+      utterance.onerror = () => {
+        setIsRewriteSpeaking(false)
+        setIsRewritePaused(false)
+      }
       rewriteUtteranceRef.current = utterance
       window.speechSynthesis.speak(utterance)
       setIsRewriteSpeaking(true)
-    }
+      setIsRewritePaused(false)
+    },
+    [latestRewrite]
+  )
 
-    if (isRewriteSpeaking) {
-      stopRewriteAudio()
+  const handleToggleRewriteAudio = () => {
+    const speechSupported =
+      typeof window !== 'undefined' &&
+      'speechSynthesis' in window &&
+      typeof window.SpeechSynthesisUtterance !== 'undefined'
+    if (!latestRewrite.trim() || !speechSupported || typeof window === 'undefined') {
       return
     }
-    const shouldRestartFromTop = rewriteSpeechProgress >= 99
-    startRewriteAudioFromProgress(shouldRestartFromTop ? 0 : rewriteSpeechProgress)
+    if (!isRewriteSpeaking) {
+      setRewriteSpeechProgress(0)
+      startRewriteAudioFromProgress(0)
+      return
+    }
+    if (isRewritePaused) {
+      window.speechSynthesis.resume()
+      setIsRewritePaused(false)
+      return
+    }
+    window.speechSynthesis.pause()
+    setIsRewritePaused(true)
   }
 
   const handleRewriteSeekChange = (event) => {
@@ -2071,43 +2277,13 @@ function App() {
     if (!speechSupported || typeof window === 'undefined' || !latestRewrite.trim()) {
       return
     }
-    if (!isRewriteSpeaking) {
-      return
-    }
+    startRewriteAudioFromProgress(rewriteSpeechProgress)
+  }
 
-    const fullText = latestRewrite.trim()
-    const clampedProgress = Math.max(0, Math.min(100, rewriteSpeechProgress))
-    const rawStartIndex = Math.floor((clampedProgress / 100) * fullText.length)
-    const boundedStart = Math.max(0, Math.min(fullText.length - 1, rawStartIndex))
-    const rawSlice = fullText.slice(boundedStart)
-    const spokenSlice = rawSlice.trimStart()
-    if (!spokenSlice) {
-      window.speechSynthesis.cancel()
-      setIsRewriteSpeaking(false)
-      setRewriteSpeechProgress(100)
-      return
-    }
-    const leadingTrimCount = rawSlice.length - spokenSlice.length
-    rewriteSpeechOffsetRef.current = boundedStart + leadingTrimCount
-    window.speechSynthesis.cancel()
-    const utterance = new window.SpeechSynthesisUtterance(spokenSlice)
-    utterance.rate = 1
-    utterance.pitch = 1
-    utterance.onboundary = (event) => {
-      if (typeof event.charIndex !== 'number' || !fullText.length) {
-        return
-      }
-      const absoluteChar = rewriteSpeechOffsetRef.current + event.charIndex
-      const nextProgress = Math.max(0, Math.min(100, (absoluteChar / fullText.length) * 100))
-      setRewriteSpeechProgress(nextProgress)
-    }
-    utterance.onend = () => {
-      setIsRewriteSpeaking(false)
-      setRewriteSpeechProgress(100)
-    }
-    utterance.onerror = () => setIsRewriteSpeaking(false)
-    rewriteUtteranceRef.current = utterance
-    window.speechSynthesis.speak(utterance)
+  const handleRewriteSkip = (delta) => {
+    const nextProgress = Math.max(0, Math.min(100, rewriteSpeechProgress + delta))
+    setRewriteSpeechProgress(nextProgress)
+    startRewriteAudioFromProgress(nextProgress)
   }
 
   const handleViewEvaluationResults = () => {
@@ -2313,12 +2489,9 @@ function App() {
             <button
               type="button"
               className="button button--secondary"
-              onClick={() => {
-                setInterviewViewActive(false)
-                goToTab('interview')
-              }}
+              onClick={handlePauseInterviewToDashboard}
             >
-              Back to dashboard
+              Pause & go to dashboard
             </button>
           </div>
         </header>
@@ -2547,7 +2720,23 @@ function App() {
                         disabled={!speechSupported}
                         onClick={handleToggleRewriteAudio}
                       >
-                        Listen
+                        {!isRewriteSpeaking ? 'Play' : isRewritePaused ? 'Resume' : 'Pause'}
+                      </button>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!speechSupported}
+                        onClick={() => handleRewriteSkip(-10)}
+                      >
+                        -10s
+                      </button>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!speechSupported}
+                        onClick={() => handleRewriteSkip(10)}
+                      >
+                        +10s
                       </button>
                       <input
                         type="range"
@@ -2649,6 +2838,56 @@ function App() {
                     </button>
                   </div>
                 </form>
+                <div className="account-menu__sessions">
+                  <p className="account-menu__sessions-title">Interview sessions</p>
+                  {interviewSessionsArchive.length > 0 ? (
+                    <ul className="account-menu__session-list">
+                      {interviewSessionsArchive.map((session) => (
+                        <li key={session.sessionId} className="account-menu__session-item">
+                          <details>
+                            <summary>
+                              <span>{session.sessionId}</span>
+                              <span className="muted">
+                                {session.startedAt ? `Started ${formatDateTime(session.startedAt)} · ` : ''}
+                                {session.mode} · {session.entries.length} answer
+                                {session.entries.length === 1 ? '' : 's'}
+                              </span>
+                            </summary>
+                            {session.entries.length > 0 ? (
+                              <ul className="account-menu__entry-list">
+                                {session.entries.map((entry, index) => (
+                                  <li key={`${session.sessionId}-${index}`} className="account-menu__entry-item">
+                                    <p>
+                                      <strong>Q:</strong> {entry.question || 'No question captured.'}
+                                    </p>
+                                    <p>
+                                      <strong>Your answer:</strong> {entry.answer || 'No answer captured.'}
+                                    </p>
+                                    <p>
+                                      <strong>Suggested answer:</strong>{' '}
+                                      {entry.rewrite || 'No rewrite suggestion returned.'}
+                                    </p>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="account-menu__notice">No answered questions captured for this session yet.</p>
+                            )}
+                          </details>
+                          <button
+                            type="button"
+                            className="button button--ghost"
+                            onClick={() => handleLoadArchivedSession(session.sessionId)}
+                          >
+                            Open session
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="account-menu__notice">No saved interview sessions yet. Submit an answer to start history.</p>
+                  )}
+                </div>
               </div>
             ) : null}
           </div>
@@ -2909,6 +3148,28 @@ function App() {
           aria-labelledby="tab-interview"
         >
           <h2>Adaptive Interview Session</h2>
+          {shouldPromptToResumeInterview ? (
+            <div className="message message--info interview-resume-prompt">
+              <p>
+                <strong>Continue previous session?</strong>{' '}
+                {currentSessionArchiveEntry?.startedAt
+                  ? `This interview started on ${formatDateTime(currentSessionArchiveEntry.startedAt)}.`
+                  : 'We found an in-progress interview session.'}
+              </p>
+              <div className="account-menu__actions">
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  onClick={() => setResumePromptAcknowledgedSessionId(sessionId)}
+                >
+                  Continue session
+                </button>
+                <button type="button" className="button button--ghost" onClick={handleStartNewInterviewSession}>
+                  Start new interview
+                </button>
+              </div>
+            </div>
+          ) : null}
           <form onSubmit={handleStartInterview} className="form">
             <div className="row">
               <label>
@@ -2948,7 +3209,21 @@ function App() {
                   checked={panelModeEnabled}
                   onChange={(event) => setPanelModeEnabled(event.target.checked)}
                 />{' '}
-                Enable panel simulation mode
+                <span className="interview-toggle-label">
+                  Enable panel simulation mode
+                  <span className="help-tooltip">
+                    <button
+                      type="button"
+                      className="help-tooltip__trigger"
+                      aria-label="What is panel simulation mode?"
+                    >
+                      ?
+                    </button>
+                    <span className="help-tooltip__content" role="tooltip">
+                      Simulates multiple interviewers so follow-up questions can shift perspective like a real panel.
+                    </span>
+                  </span>
+                </span>
               </label>
               <label>
                 <input
@@ -2956,9 +3231,58 @@ function App() {
                   checked={pressureRoundEnabled}
                   onChange={(event) => setPressureRoundEnabled(event.target.checked)}
                 />{' '}
-                Enable pressure round style
+                <span className="interview-toggle-label">
+                  Enable pressure round style
+                  <span className="help-tooltip">
+                    <button
+                      type="button"
+                      className="help-tooltip__trigger"
+                      aria-label="What is pressure round style?"
+                    >
+                      ?
+                    </button>
+                    <span className="help-tooltip__content" role="tooltip">
+                      Increases challenge with tighter, more direct prompts to practice calm and concise responses.
+                    </span>
+                  </span>
+                </span>
               </label>
             </div>
+            <fieldset className="question-count-chooser">
+              <legend>Interview length</legend>
+              <label className="question-count-chooser__option">
+                <input
+                  type="radio"
+                  name="question-count-mode"
+                  value="agent"
+                  checked={questionCountMode === 'agent'}
+                  onChange={() => setQuestionCountMode('agent')}
+                />
+                <span>Use agent recommendation based on the role</span>
+              </label>
+              <label className="question-count-chooser__option">
+                <input
+                  type="radio"
+                  name="question-count-mode"
+                  value="custom"
+                  checked={questionCountMode === 'custom'}
+                  onChange={() => setQuestionCountMode('custom')}
+                />
+                <span>Let me choose how many questions to answer</span>
+              </label>
+              {questionCountMode === 'custom' ? (
+                <label className="question-count-chooser__input">
+                  Number of questions
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={customQuestionCount}
+                    onChange={(event) => setCustomQuestionCount(event.target.value)}
+                  />
+                </label>
+              ) : null}
+            </fieldset>
             <p className="field-hint field-hint--block">
               Same ID keeps the backend interview memory. Use a new one to start a fresh run (clears the current
               question and your saved answers in this view).
@@ -3027,10 +3351,13 @@ function App() {
             </button>
           </form>
 
-          {currentQuestion ? (
+          {!shouldPromptToResumeInterview && currentQuestion ? (
             <div className="question-card">
               <h3>Current Question</h3>
               <p>{currentQuestion}</p>
+              <button type="button" className="button button--ghost" onClick={handlePauseInterviewToDashboard}>
+                Pause and return to dashboard
+              </button>
 
               <form onSubmit={handleSubmitAnswer} className="form">
                 <label>
@@ -3094,7 +3421,23 @@ function App() {
                         disabled={!speechSupported}
                         onClick={handleToggleRewriteAudio}
                       >
-                        Listen
+                        {!isRewriteSpeaking ? 'Play' : isRewritePaused ? 'Resume' : 'Pause'}
+                      </button>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!speechSupported}
+                        onClick={() => handleRewriteSkip(-10)}
+                      >
+                        -10s
+                      </button>
+                      <button
+                        type="button"
+                        className="button button--ghost"
+                        disabled={!speechSupported}
+                        onClick={() => handleRewriteSkip(10)}
+                      >
+                        +10s
                       </button>
                       <input
                         type="range"
