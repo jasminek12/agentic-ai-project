@@ -2431,7 +2431,9 @@ function App() {
                 </div>
               ) : null}
 
-              {lastScore !== null ? <p className="message message--info">Score: {lastScore} / 10</p> : null}
+              {activeTab === 'interview' && lastScore !== null ? (
+                <p className="message message--info">Score: {lastScore} / 10</p>
+              ) : null}
               {lastFeedback ? <p className="message message--success">{lastFeedback}</p> : null}
               {latestCritique ? (
                 <p className="message message--info">
@@ -2590,16 +2592,20 @@ function App() {
               {activitySteps.filter((step) => step.status === 'done').length} / {activitySteps.length}
             </p>
           </article>
-          <article className="stat-card">
-            <p className="stat-card__label">Interview Readiness</p>
-            <p className="stat-card__value">{readinessScore}%</p>
-          </article>
-          <article className="stat-card">
-            <p className="stat-card__label">Latest Score</p>
-            <p className="stat-card__value">
-              {lastScore === null ? '-' : `${lastScore}/10 (${getScoreLabel(lastScore)})`}
-            </p>
-          </article>
+          {activeTab === 'interview' ? (
+            <>
+              <article className="stat-card">
+                <p className="stat-card__label">Interview Readiness</p>
+                <p className="stat-card__value">{readinessScore}%</p>
+              </article>
+              <article className="stat-card">
+                <p className="stat-card__label">Latest Score</p>
+                <p className="stat-card__value">
+                  {lastScore === null ? '-' : `${lastScore}/10 (${getScoreLabel(lastScore)})`}
+                </p>
+              </article>
+            </>
+          ) : null}
         </div>
 
         <div className="agentic-columns">
@@ -2650,39 +2656,6 @@ function App() {
           </div>
         </div>
 
-        <div className="timeline-wrap">
-          <h3>Goal + Subtask Execution</h3>
-          <form onSubmit={handleSetGoal} className="form">
-            <label>
-              Set Agent Goal
-              <input
-                type="text"
-                value={goalInput}
-                onChange={(event) => setGoalInput(event.target.value)}
-                placeholder="e.g. Get PM-ready behavioral answers"
-              />
-            </label>
-            <button type="submit" className="button button--secondary">
-              Build subtasks
-            </button>
-          </form>
-          {agentGoal ? <p className="muted">Current goal: {agentGoal}</p> : null}
-          {goalSubtasks.length > 0 ? (
-            <ul className="step-list">
-              {goalSubtasks.map((task) => (
-                <li key={task.id} className={`step ${task.done ? 'step--done' : 'step--pending'}`}>
-                  <input
-                    type="checkbox"
-                    checked={task.done}
-                    onChange={() => toggleSubtask(task.id)}
-                    aria-label={task.title}
-                  />
-                  <span>{task.title}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
       </section>
 
           <nav
