@@ -2,7 +2,7 @@ import json
 import re
 from collections import Counter
 from datetime import date, datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 from app.utils.llm import call_llm
 
@@ -50,6 +50,66 @@ def _next_panel_persona(panel_personas: List[str], turn_index: int) -> str:
     return panel_personas[turn_index % len(panel_personas)]
 
 
+def _extract_key_skills(job_description: str) -> List[str]:
+    curated_skills = [
+        "python",
+        "java",
+        "javascript",
+        "typescript",
+        "react",
+        "node",
+        "fastapi",
+        "django",
+        "flask",
+        "sql",
+        "postgresql",
+        "mysql",
+        "mongodb",
+        "redis",
+        "docker",
+        "kubernetes",
+        "aws",
+        "azure",
+        "gcp",
+        "terraform",
+        "git",
+        "linux",
+        "rest",
+        "graphql",
+        "microservices",
+        "system design",
+        "debugging",
+        "testing",
+        "ci/cd",
+        "splunk",
+    ]
+    text = job_description.lower()
+    found = [skill for skill in curated_skills if skill in text]
+    return found[:5]
+
+
+def _normalize_question(text: str) -> str:
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+def _recent_questions_set(history: List[Dict[str, Any]]) -> Set[str]:
+    return {
+        _normalize_question(str(item.get("question", "")))
+        for item in history[-12:]
+        if str(item.get("question", "")).strip()
+    }
+
+
+def get_technical_question_type(difficulty: str) -> str:
+    if difficulty == "easy":
+        return "conceptual"
+    elif difficulty == "medium":
+        return "applied"
+    elif difficulty == "hard":
+        return "coding"
+    return "applied"
+
+
 def generate_question(
     mode: str,
     job_description: str,
@@ -64,41 +124,73 @@ def generate_question(
 ) -> Dict[str, str]:
     print(f"[DEBUG] Generating interview question for mode={mode}")
     difficulty = next_question_logic(history)
+    if mode == "technical":
+        jd_lower = job_description.lower()
+        if any(keyword in jd_lower for keyword in ["intern", "junior", "entry-level", "graduate"]):
+            difficulty = "easy" if difficulty == "easy" else "medium"
     recent_history = history[-5:] if history else []
+    previous_questions = _recent_questions_set(history)
     weak_topics = _get_recent_weak_topics(history)
+    target_weak_topic = weak_topics[0] if weak_topics else ""
+    key_skills = _extract_key_skills(job_description)
+    question_type = get_technical_question_type(difficulty) if mode == "technical" else "general"
     persona = _next_panel_persona(panel_personas or [], panel_turn_index)
     style = "challenging and probing" if pressure_round else "supportive and structured"
 
-    if mode == "behavioral":
-        mode_instructions = (
-            "Generate one STAR-style behavioral interview question. "
-            "Use resume context and focus on teamwork, leadership, or challenges."
-        )
-    elif mode == "technical":
-        mode_instructions = (
-            "Generate one technical interview question tied to the job description. "
-            "Focus heavily on required skills/tools and practical implementation."
-        )
-    else:
+    if mode not in {"behavioral", "technical"}:
         raise ValueError("Invalid interview mode. Must be 'behavioral' or 'technical'.")
 
     prompt = f"""
-You are an interview coach.
-Mode: {mode}
-Difficulty target: {difficulty}
+You are a senior technical interviewer.
 
-Instructions:
-- {mode_instructions}
-- Ask exactly one question.
-- Adapt to candidate performance based on prior scores.
+Mode: {mode}
+Difficulty: {difficulty}
+
+Your task:
+Generate ONE high-quality interview question.
+
+STRICT RULES:
+
+1. Question MUST be relevant to the job description
+2. Question MUST match the difficulty level
+3. Question MUST NOT be generic
+4. Question MUST NOT repeat previous questions
+5. If weak topics exist, focus on ONE of them
+6. Keep it realistic (like real interviews at tech companies)
+
+ENFORCED QUALITY:
+- NEVER generate generic questions.
+- ALWAYS tie the question to the job description.
+- ALWAYS make the question actionable and realistic.
+
+DIFFICULTY RULES:
+- easy: Ask basic conceptual questions only. NO coding tasks and NO complex scenarios.
+- medium: Ask applied or scenario-based questions with moderate complexity.
+- hard: Ask advanced technical/problem-solving questions, including system design, debugging, or complex query reasoning when relevant.
+
+ALIGNMENT RULES:
+- Extract 3-5 key skills/tools from the job description and include at least one in the question.
+- Use this extracted skill list as the anchor: {json.dumps(key_skills, ensure_ascii=False)}
+
+WEAK-TOPIC RULE:
+- If weak topics exist, MUST target exactly one weak topic.
+- Mention the chosen weak topic in your internal reasoning, but do not reveal that reasoning.
+- Primary weak topic to target: "{target_weak_topic}"
+
+REPETITION RULE:
+- Compare against previous questions and avoid duplicates or near-duplicates.
+
+Style notes:
 - Keep style {style}.
 - If panel mode is true, ask in the voice of persona: "{persona}".
-- If weak topics exist, target one of them with a tailored drill.
-- Return STRICT JSON only:
-  {{
-    "question": "...",
-    "focus_area": "..."
-  }}
+
+OUTPUT FORMAT:
+
+Return ONLY JSON:
+{{
+"question": "...",
+"focus_area": "..."
+}}
 
 Panel Mode: {panel_mode}
 Pressure Round: {pressure_round}
@@ -106,6 +198,7 @@ Persona: {persona}
 Company Context: {company_context}
 Role Context: {role_context}
 Recent Weak Topics: {json.dumps(weak_topics, ensure_ascii=False)}
+Previous Questions: {json.dumps(list(previous_questions), ensure_ascii=False)}
 
 Job Description:
 {job_description}
@@ -116,23 +209,142 @@ Resume:
 Recent History:
 {json.dumps(recent_history, ensure_ascii=False)}
 """.strip()
+    if mode == "technical":
+        prompt = f"""
+You are a senior technical interviewer.
 
-    response = call_llm(prompt)
-    parsed = _extract_json_object(response)
-    question = parsed.get("question", "").strip()
-    focus_area = str(parsed.get("focus_area", "")).strip()
+Mode: technical
+Difficulty: {difficulty}
+Question Type: {question_type}
+
+Your task:
+Generate ONE high-quality technical interview question.
+
+---
+
+## STRICT RULES
+
+If Question Type = "conceptual":
+
+* Ask basic theory questions
+* No coding
+* Example: "What is a hash map?"
+
+If Question Type = "applied":
+
+* Ask real-world scenario questions
+* Example: "How would you detect anomalies in logs using Splunk?"
+
+If Question Type = "coding":
+
+* Ask LeetCode-style or online assessment questions
+* MUST include:
+
+  * clear problem statement
+  * input/output description
+* Example:
+  "Given a list of IP addresses, return the top K most frequent IPs."
+
+---
+
+GLOBAL RULES:
+
+1. DO NOT ask full system design questions
+2. DO NOT ask "build a full project"
+3. Questions must resemble:
+   * LeetCode
+   * HackerRank
+   * real interview questions
+4. Must align with job description when possible
+5. Must NOT repeat previous questions
+6. If weak topics exist, target one
+
+Alignment and constraints:
+- Key skills/tools from JD: {json.dumps(key_skills, ensure_ascii=False)}
+- At least one skill/tool from the list should appear in the question when possible.
+- Previous questions: {json.dumps(list(previous_questions), ensure_ascii=False)}
+- Recent weak topics: {json.dumps(weak_topics, ensure_ascii=False)}
+- Primary weak topic to target when available: "{target_weak_topic}"
+- Keep style {style}. Persona voice: "{persona}" when panel mode is true.
+- Company Context: {company_context}
+- Role Context: {role_context}
+
+Job Description:
+{job_description}
+
+Resume:
+{resume}
+
+Recent History:
+{json.dumps(recent_history, ensure_ascii=False)}
+
+---
+
+OUTPUT FORMAT:
+
+Return ONLY JSON:
+{{
+"question": "...",
+"focus_area": "...",
+"type": "{question_type}"
+}}
+""".strip()
+
+    question = ""
+    focus_area = ""
+    parsed_type = question_type
+    for _ in range(2):
+        response = call_llm(prompt)
+        parsed = _extract_json_object(response)
+        question = str(parsed.get("question", "")).strip()
+        focus_area = str(parsed.get("focus_area", "")).strip()
+        parsed_type = str(parsed.get("type", question_type)).strip() or question_type
+        if not question:
+            continue
+
+        normalized_question = _normalize_question(question)
+        if normalized_question in previous_questions:
+            prompt += (
+                "\n\nRevision instruction: The previous attempt repeated history. "
+                "Return a different question that is not semantically similar to past questions."
+            )
+            continue
+
+        if key_skills and not any(skill.lower() in normalized_question for skill in key_skills):
+            prompt += (
+                "\n\nRevision instruction: Include at least one explicit key skill/tool from the extracted list "
+                "in the question text."
+            )
+            continue
+
+        if target_weak_topic and target_weak_topic.lower() not in focus_area.lower():
+            prompt += (
+                f"\n\nRevision instruction: focus_area must reflect the weak topic target '{target_weak_topic}'."
+            )
+            continue
+
+        break
+
     if not question:
         raise ValueError("Generated question is empty.")
-    return {"question": question, "focus_area": focus_area, "persona": persona}
+    result: Dict[str, str] = {"question": question, "focus_area": focus_area, "persona": persona}
+    if mode == "technical":
+        result["type"] = parsed_type
+    return result
 
 
 def evaluate_answer(question: str, answer: str, mode: str = "behavioral") -> Dict[str, Any]:
     print("[DEBUG] Evaluating interview answer")
     prompt = f"""
 You are an interview evaluator.
-Score the answer from 0 to 10 and provide constructive feedback.
-Identify weak topics.
-Also provide a concise critique and a stronger rewrite in the candidate's voice.
+Score the answer from 0 to 10 and provide constructive feedback with strict standards.
+
+Scoring policy:
+- Penalize vague answers heavily.
+- Reward clear structure (STAR when applicable), depth, technical accuracy, and measurable impact.
+- Score strictly. A generic answer should not exceed 5/10.
+
+Also identify weak topics, provide a concise critique, and provide a stronger rewrite in the candidate's voice.
 
 Return STRICT JSON only:
 {{
@@ -184,17 +396,30 @@ Answer:
     }
 
 
-def generate_follow_up(question: str, answer: str, weak_topics: List[str], pressure_round: bool = False) -> str:
+def generate_follow_up(
+    question: str,
+    answer: str,
+    weak_topics: List[str],
+    pressure_round: bool = False,
+    score: int | None = None,
+) -> str:
+    low_score_rule = (
+        "Score is below 5: generate a clarification follow-up on the same topic only; do not switch to a new topic."
+        if isinstance(score, int) and score < 5
+        else "Generate a natural follow-up; if possible, deepen the same topic before changing scope."
+    )
     prompt = f"""
 Generate one natural interviewer follow-up question based on the latest answer.
 If pressure round is enabled, make it more challenging.
 Target measurable impact, trade-offs, or clarity gaps.
+{low_score_rule}
 
 Return STRICT JSON only:
 {{
   "follow_up_question": "..."
 }}
 
+Score: {score}
 Pressure Round: {pressure_round}
 Original Question: {question}
 Candidate Answer: {answer}

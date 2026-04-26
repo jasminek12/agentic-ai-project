@@ -220,6 +220,7 @@ def submit_answer(payload: SubmitAnswerRequest):
                 payload.answer,
                 evaluation["weak_topics"],
                 pressure_round=bool(memory.get("pressure_round", False)),
+                score=evaluation["score"],
             )
             next_question = generate_question(
                 memory["mode"],

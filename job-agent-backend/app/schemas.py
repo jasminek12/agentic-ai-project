@@ -189,6 +189,7 @@ class FrameMessageResponse(BaseModel):
 
 
 class ResumeExperienceItem(BaseModel):
+    title: str = ""
     company: str
     points: List[str]
 

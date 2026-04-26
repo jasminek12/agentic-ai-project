@@ -248,6 +248,54 @@ function buildOutreachMessage({
   return full.trim()
 }
 
+function formatTailoredResumeForCopy(data) {
+  if (!data || typeof data !== 'object') {
+    return ''
+  }
+
+  const lines = []
+  const summary = typeof data.summary === 'string' ? data.summary.trim() : ''
+  const experience = Array.isArray(data.experience) ? data.experience : []
+  const skills = Array.isArray(data.skills) ? data.skills : []
+
+  if (summary) {
+    lines.push('SUMMARY')
+    lines.push(summary)
+    lines.push('')
+  }
+
+  if (experience.length > 0) {
+    lines.push('EXPERIENCE')
+    for (const item of experience) {
+      const title = typeof item?.title === 'string' ? item.title.trim() : ''
+      const company = typeof item?.company === 'string' ? item.company.trim() : ''
+      const heading = [title, company].filter(Boolean).join(' - ')
+      if (heading) {
+        lines.push(heading)
+      }
+      const points = Array.isArray(item?.points) ? item.points : []
+      for (const point of points) {
+        if (typeof point === 'string' && point.trim()) {
+          lines.push(`- ${point.trim()}`)
+        }
+      }
+      lines.push('')
+    }
+  }
+
+  if (skills.length > 0) {
+    lines.push('SKILLS')
+    lines.push(
+      skills
+        .filter((skill) => typeof skill === 'string' && skill.trim())
+        .map((skill) => skill.trim())
+        .join(', ')
+    )
+  }
+
+  return lines.join('\n').trim()
+}
+
 function App() {
   const [userName, setUserName] = useState('')
   const [hasEnteredName, setHasEnteredName] = useState(false)
@@ -260,6 +308,8 @@ function App() {
   const [resumeSuccess, setResumeSuccess] = useState('')
   const [isTailoring, setIsTailoring] = useState(false)
   const [resumeDiffPreview, setResumeDiffPreview] = useState([])
+  const [tailoredResumeData, setTailoredResumeData] = useState(null)
+  const [resumeCopyNotice, setResumeCopyNotice] = useState('')
 
   const [mode, setMode] = useState('behavioral')
   const [sessionId, setSessionId] = useState(getInitialSessionId)
@@ -1006,7 +1056,7 @@ function App() {
       { key: 'extract', label: 'Extract keywords' },
       { key: 'rewrite', label: 'Rewrite bullets' },
       { key: 'quantify', label: 'Quantify impact' },
-      { key: 'export', label: 'Export PDF' },
+      { key: 'export', label: 'Prepare copyable output' },
     ]
 
     const currentIndexMap = {
@@ -1095,7 +1145,7 @@ function App() {
                 : 'pending',
       },
       {
-        label: activeTab === 'resume' ? 'Ready to download PDF' : 'Answer submitted',
+        label: activeTab === 'resume' ? 'Ready to copy tailored resume' : 'Answer submitted',
         status:
           activeTab === 'resume'
             ? resumeSuccess
@@ -1206,6 +1256,8 @@ function App() {
     event.preventDefault()
     setResumeError('')
     setResumeSuccess('')
+    setResumeCopyNotice('')
+    setTailoredResumeData(null)
 
     if (!resumeText.trim() || !jobDescription.trim()) {
       setResumeError('Resume text and job description are required.')
@@ -1242,23 +1294,31 @@ function App() {
       }
 
       setPlanPhase('quantify')
-      const blob = await response.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = objectUrl
-      link.download = `tailored_resume_${Date.now()}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(objectUrl)
-
-      setResumeSuccess('Tailored resume generated. PDF download started.')
+      const data = await response.json()
+      setTailoredResumeData(data)
+      setResumeSuccess('Tailored resume generated. You can copy and use it anywhere.')
       setPlanPhase('done')
     } catch (error) {
       setResumeError(error.message || 'Failed to tailor resume.')
       setPlanPhase('idle')
     } finally {
       setIsTailoring(false)
+    }
+  }
+
+  const handleCopyTailoredResume = async () => {
+    if (!tailoredResumeData) {
+      return
+    }
+    const output = formatTailoredResumeForCopy(tailoredResumeData)
+    if (!output) {
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(output)
+      setResumeCopyNotice('Tailored resume copied to clipboard.')
+    } catch {
+      setResumeCopyNotice('Copy failed — select the text and copy manually.')
     }
   }
 
@@ -2063,7 +2123,7 @@ function App() {
                 </span>
               ) : (
                 <span className="api-health api-health--err" role="status">
-                  Backend unreachable — start the API for PDF, interview, and live outreach.
+                  Backend unreachable — start the API for resume, interview, and live outreach.
                 </span>
               )}
             </p>
@@ -2220,7 +2280,7 @@ function App() {
           role="tabpanel"
           aria-labelledby="tab-resume"
         >
-          <h2>Generate Tailored Resume PDF</h2>
+          <h2>Generate Tailored Resume</h2>
           <form onSubmit={handleTailorResume} className="form">
             <label>
               Resume Text
@@ -2253,7 +2313,7 @@ function App() {
             </label>
 
             <button type="submit" disabled={isTailoring}>
-              {isTailoring ? 'Generating PDF...' : 'Tailor Resume'}
+              {isTailoring ? 'Generating...' : 'Tailor Resume'}
             </button>
 
             {resumeError ? <p className="message message--error">{resumeError}</p> : null}
@@ -2275,6 +2335,55 @@ function App() {
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+
+          {tailoredResumeData ? (
+            <div className="question-card">
+              <h3>Tailored Resume Output</h3>
+              <div className="button-row">
+                <button type="button" className="button button--secondary" onClick={handleCopyTailoredResume}>
+                  Copy tailored resume
+                </button>
+              </div>
+              {resumeCopyNotice ? <p className="message message--info">{resumeCopyNotice}</p> : null}
+
+              {tailoredResumeData.summary ? (
+                <>
+                  <h4>Summary</h4>
+                  <p>{tailoredResumeData.summary}</p>
+                </>
+              ) : null}
+
+              {Array.isArray(tailoredResumeData.experience) && tailoredResumeData.experience.length > 0 ? (
+                <>
+                  <h4>Experience</h4>
+                  <ul className="history-list">
+                    {tailoredResumeData.experience.map((item, index) => (
+                      <li key={`${item.company || 'experience'}-${index}`}>
+                        <p>
+                          <strong>{item.title || 'Role'}</strong>
+                          {item.company ? ` - ${item.company}` : ''}
+                        </p>
+                        {Array.isArray(item.points) && item.points.length > 0 ? (
+                          <ul className="history-list">
+                            {item.points.map((point, pointIndex) => (
+                              <li key={`${point}-${pointIndex}`}>{point}</li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+
+              {Array.isArray(tailoredResumeData.skills) && tailoredResumeData.skills.length > 0 ? (
+                <>
+                  <h4>Skills</h4>
+                  <p>{tailoredResumeData.skills.join(', ')}</p>
+                </>
+              ) : null}
             </div>
           ) : null}
         </section>

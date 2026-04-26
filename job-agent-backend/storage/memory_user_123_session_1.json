@@ -1,12 +1,57 @@
 {
-  "mode": "behavioral",
-  "job_description": "Looking for a Python backend developer with Redis and Docker experience.",
-  "resume": "Backend Engineer with 3 years of experience...",
+  "mode": "technical",
+  "job_description": "Looking for a Python backend developer.",
+  "resume": "Python backend engineer intern",
+  "panel_mode": false,
+  "pressure_round": false,
+  "company_context": "",
+  "role_context": "",
+  "interview_date": "2026-05-02",
+  "panel_personas": [],
+  "panel_turn_index": 1,
+  "weak_topic_memory": [
+    "query optimization",
+    "indexing",
+    "connection pooling"
+  ],
+  "target_question_count": 7,
+  "answered_count": 1,
+  "pending_next_step": {
+    "follow_up_question": "Can you elaborate on how you would specifically address the performance of the Python application, focusing on one of the key factors such as query optimization, indexing, or connection pooling, to improve its overall efficiency?",
+    "next_question": "What is query optimization and how does it improve the performance of a database in a Python application?",
+    "next_persona": "interviewer",
+    "next_focus_area": "python, query optimization, database performance"
+  },
+  "interview_complete": false,
   "history": [
     {
-      "question": "Describe a situation where you had to collaborate with a team to resolve a critical issue with a Python backend application, such as a Redis connection timeout or a Docker container crash, and walk me through your process of identifying the root cause, communicating with the team, and implementing a solution.",
+      "question": "Can you describe a scenario where you would use Redis as a caching layer in a Python application deployed using Docker, and how you would handle cache invalidation and consistency across multiple containers?",
       "answer": "",
-      "score": null
+      "score": null,
+      "persona": "interviewer",
+      "focus_area": "python, redis, docker"
+    },
+    {
+      "question": "How would you implement a Python function to handle pagination for a large dataset of user records, where each record contains a unique user ID, name, and email, and the function should take in the current page number, page size, and a list of user records as input, and return a dictionary containing the paginated records and the total number of pages?",
+      "answer": "",
+      "score": null,
+      "persona": "interviewer",
+      "focus_area": "python, pagination, data processing"
+    },
+    {
+      "question": "How would you optimize the performance of a Python application that uses a database to store and retrieve large amounts of data, considering factors such as query optimization, indexing, and connection pooling?",
+      "answer": "In my previous role, we had conflicting priorities...",
+      "score": 2,
+      "persona": "interviewer",
+      "focus_area": "python, database optimization, performance tuning",
+      "feedback": "The answer lacks clear structure, technical accuracy, and measurable impact. It does not address the question directly and fails to provide specific details on optimizing database performance in a Python application.",
+      "weak_topics": [
+        "query optimization",
+        "indexing",
+        "connection pooling"
+      ],
+      "critique": "The answer is too vague and does not provide any technical insights. It seems to be a generic introduction to a story rather than a direct answer to the question.",
+      "rewrite": "To optimize the performance of a Python application that uses a database, I would follow the STAR method. First, I would analyze the database queries to identify bottlenecks and optimize them using techniques such as query caching, indexing, and limiting result sets. For example, I would use the 'EXPLAIN' statement to analyze query execution plans and create indexes on frequently filtered columns. Next, I would implement connection pooling using libraries like psycopg2 or pg8000 to reduce the overhead of creating new connections. Additionally, I would consider using an ORM like SQLAlchemy to simplify query construction and caching. By implementing these optimizations, I expect to achieve a significant reduction in query execution time and an improvement in overall application performance, resulting in a 30% decrease in average response time and a 25% increase in throughput."
     }
   ]
 }
