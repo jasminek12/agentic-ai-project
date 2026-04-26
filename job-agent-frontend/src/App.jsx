@@ -2764,7 +2764,7 @@ function App() {
               </span>
             </label>
 
-            <button type="submit" disabled={isTailoring}>
+            <button type="submit" className="button button--secondary" disabled={isTailoring}>
               {isTailoring ? 'Generating...' : 'Tailor Resume'}
             </button>
 
@@ -2960,7 +2960,7 @@ function App() {
               </span>
             </label>
 
-            <button type="submit" disabled={isStartingInterview}>
+            <button type="submit" className="button button--secondary" disabled={isStartingInterview}>
               {isStartingInterview ? 'Starting Interview...' : 'Start Interview'}
             </button>
           </form>
@@ -2986,7 +2986,7 @@ function App() {
                     answer)
                   </span>
                 </label>
-                <button type="submit" disabled={isSubmittingAnswer}>
+                <button type="submit" className="button button--secondary" disabled={isSubmittingAnswer}>
                   {isSubmittingAnswer ? 'Submitting...' : 'Submit Answer'}
                 </button>
               </form>
@@ -3240,7 +3240,7 @@ function App() {
             </label>
 
             <div className="outreach-form-actions">
-              <button className="button button--primary" type="submit" disabled={isFramingOutreach}>
+              <button className="button button--secondary" type="submit" disabled={isFramingOutreach}>
                 {isFramingOutreach ? 'Framing…' : 'Frame message'}
               </button>
             </div>
@@ -3265,7 +3265,7 @@ function App() {
               />
             </label>
             <div className="outreach-toolbar">
-              <button type="button" className="button button--primary" onClick={handleCopyOutreach}>
+              <button type="button" className="button button--secondary" onClick={handleCopyOutreach}>
                 Copy to clipboard
               </button>
               <button
