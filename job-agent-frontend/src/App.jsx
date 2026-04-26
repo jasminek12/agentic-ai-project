@@ -1321,6 +1321,100 @@ function App() {
     resumeSuccess,
     resumeWordCount,
   ])
+  const completedActivitySteps = useMemo(
+    () => activitySteps.filter((step) => step.status === 'done').length,
+    [activitySteps]
+  )
+  const nextStepLabel = useMemo(() => {
+    const nextPendingStep = activitySteps.find((step) => step.status !== 'done')
+    return nextPendingStep ? nextPendingStep.label : 'All core steps are complete.'
+  }, [activitySteps])
+  const topInsights = useMemo(() => dynamicInsights.slice(0, 2), [dynamicInsights])
+  const agentLiveStatus = useMemo(() => {
+    if (activeTab === 'resume') {
+      if (isTailoring) {
+        return { isRunning: true, text: 'Analyzing role keywords and rewriting resume bullets.' }
+      }
+      if (resumeSuccess || tailoredResumeData) {
+        return { isRunning: false, text: 'Tailoring pass complete. Draft is ready to review.' }
+      }
+      return { isRunning: false, text: 'Waiting for resume and job description inputs.' }
+    }
+    if (activeTab === 'interview') {
+      if (isStartingInterview) {
+        return { isRunning: true, text: 'Preparing interview context and first prompt.' }
+      }
+      if (isSubmittingAnswer) {
+        return { isRunning: true, text: 'Scoring answer and generating coaching feedback.' }
+      }
+      if (currentQuestion) {
+        return { isRunning: false, text: 'Interview is active. Submit an answer to continue.' }
+      }
+      return { isRunning: false, text: 'Ready to start a new interview session.' }
+    }
+    if (isFramingOutreach) {
+      return { isRunning: true, text: 'Drafting outreach message for selected tone and channel.' }
+    }
+    if (framedMessage.trim()) {
+      return { isRunning: false, text: 'Outreach draft generated. Refine and copy when ready.' }
+    }
+    return { isRunning: false, text: 'Ready to frame a recruiter-ready outreach message.' }
+  }, [
+    activeTab,
+    currentQuestion,
+    framedMessage,
+    isFramingOutreach,
+    isStartingInterview,
+    isSubmittingAnswer,
+    isTailoring,
+    resumeSuccess,
+    tailoredResumeData,
+  ])
+  const recentAgentActions = useMemo(() => {
+    if (activeTab === 'resume') {
+      if (resumeSuccess || tailoredResumeData) {
+        return [
+          'Extracted role keywords from the job description.',
+          'Rewrote experience bullets for stronger impact language.',
+          'Prepared copy-ready tailored resume output.',
+        ]
+      }
+      return [
+        'Standing by for resume and job description context.',
+        'Will map keywords to your strongest experience bullets.',
+        'Will prioritize quantified outcomes during rewrite.',
+      ]
+    }
+    if (activeTab === 'interview') {
+      const latestAttempt = answerHistory[0]
+      const latestScoreNote =
+        latestAttempt && typeof latestAttempt.score === 'number'
+          ? `Last score logged: ${latestAttempt.score}/10.`
+          : 'No scored answer logged yet.'
+      return [
+        latestScoreNote,
+        currentQuestion
+          ? 'Current interview question is loaded and ready.'
+          : 'Question queue will start after session initialization.',
+        'Weak-spot feedback is tracked across recent sessions.',
+      ]
+    }
+    return [
+      framedMessage.trim()
+        ? 'Generated an editable outreach draft aligned to your tone.'
+        : 'Awaiting outreach inputs to draft message copy.',
+      outreachCopyNotice ? 'Copied latest outreach draft to clipboard.' : 'Draft can be copied in one click after generation.',
+      'Channel setting tunes message length for email vs LinkedIn.',
+    ]
+  }, [
+    activeTab,
+    answerHistory,
+    currentQuestion,
+    framedMessage,
+    outreachCopyNotice,
+    resumeSuccess,
+    tailoredResumeData,
+  ])
 
   const handleEnterApp = (event) => {
     event.preventDefault()
@@ -2584,79 +2678,74 @@ function App() {
             </p>
           </section>
 
-          <section className="agentic-dashboard panel workspace-panel workspace-panel--dashboard">
-        <div className="stat-grid">
-          <article className="stat-card">
-            <p className="stat-card__label">Workflow Progress</p>
-            <p className="stat-card__value">
-              {activitySteps.filter((step) => step.status === 'done').length} / {activitySteps.length}
-            </p>
-          </article>
-          {activeTab === 'interview' ? (
-            <>
-              <article className="stat-card">
-                <p className="stat-card__label">Interview Readiness</p>
-                <p className="stat-card__value">{readinessScore}%</p>
-              </article>
-              <article className="stat-card">
-                <p className="stat-card__label">Latest Score</p>
-                <p className="stat-card__value">
-                  {lastScore === null ? '-' : `${lastScore}/10 (${getScoreLabel(lastScore)})`}
+          <section className="workflow-strip panel workspace-panel" aria-label="Workflow assistant">
+            <div className="workflow-strip__row">
+              <p className="workflow-strip__item">
+                <span className="workflow-strip__label">Progress</span>
+                <strong>
+                  {completedActivitySteps}/{activitySteps.length}
+                </strong>
+              </p>
+              <p className="workflow-strip__item">
+                <span className="workflow-strip__label">Next</span>
+                <span>{nextStepLabel}</span>
+              </p>
+              <p className="workflow-strip__item">
+                <span className="workflow-strip__label">Insight</span>
+                <span>{topInsights[0] || 'Add more context to unlock guidance.'}</span>
+              </p>
+              <p className="workflow-strip__item workflow-strip__status">
+                <span className="workflow-strip__label">Agent Status</span>
+                <span>
+                  {agentLiveStatus.isRunning ? <span className="workflow-strip__pulse" aria-hidden="true" /> : null}
+                  {agentLiveStatus.text}
+                </span>
+              </p>
+              {activeTab === 'interview' ? (
+                <p className="workflow-strip__item">
+                  <span className="workflow-strip__label">Readiness</span>
+                  <strong>{readinessScore}%</strong>
                 </p>
-              </article>
-            </>
-          ) : null}
-        </div>
-
-        <div className="agentic-columns">
-          <div>
-            <h3>Agent Workflow</h3>
-            <ul className="step-list">
-              {activitySteps.map((step) => (
-                <li key={step.label} className={`step step--${step.status}`}>
-                  <span className="step__dot" />
-                  <span>{step.label}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3>Live Agent Insights</h3>
-            <ul className="insight-list">
-              {dynamicInsights.map((insight) => (
-                <li key={insight}>{insight}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        <div className="timeline-wrap">
-          <h3>Autonomous Plan Timeline</h3>
-          <ul className="step-list">
-            {planSteps.map((step) => (
-              <li key={step.key} className={`step step--${step.status}`}>
-                <span className="step__dot" />
-                <span>{step.label}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div>
-          <h3>Agent Confidence + Rationale</h3>
-          <div className="confidence-grid">
-            {confidenceCards.map((card) => (
-              <article key={card.title} className="stat-card">
-                <p className="stat-card__label">
-                  {card.title} - {card.confidence} confidence
-                </p>
-                <p>{card.rationale}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-
-      </section>
+              ) : null}
+            </div>
+            <details className="workflow-strip__details">
+              <summary>More details</summary>
+              <div className="workflow-strip__details-grid">
+                <div>
+                  <h3>Workflow Timeline</h3>
+                  <ul className="step-list">
+                    {planSteps.map((step) => (
+                      <li key={step.key} className={`step step--${step.status}`}>
+                        <span className="step__dot" />
+                        <span>{step.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h3>Confidence</h3>
+                  <div className="confidence-grid">
+                    {confidenceCards.map((card) => (
+                      <article key={card.title} className="stat-card">
+                        <p className="stat-card__label">
+                          {card.title} - {card.confidence} confidence
+                        </p>
+                        <p>{card.rationale}</p>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h3>Recent Agent Actions</h3>
+                  <ul className="insight-list">
+                    {recentAgentActions.map((action) => (
+                      <li key={action}>{action}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </details>
+          </section>
 
           <nav
             className="tabs tabs--workspace"
@@ -2698,7 +2787,7 @@ function App() {
         </button>
       </nav>
 
-          {activeTab === 'resume' ? (
+              {activeTab === 'resume' ? (
         <section
           className="panel workspace-panel"
           id="panel-resume"
