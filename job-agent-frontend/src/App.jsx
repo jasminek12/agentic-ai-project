@@ -7,6 +7,63 @@ const API_BASE_URL =
 const DRAFT_KEY = 'aih-workspace-draft'
 const SESSION_ID_KEY = 'aih-session-id'
 const SESSION_COUNTER_KEY = 'aih-session-counter'
+const ACCOUNT_KEY = 'aih-local-accounts-v2'
+
+function readStoredAccounts() {
+  if (typeof window === 'undefined') {
+    return []
+  }
+  try {
+    const raw = window.localStorage.getItem(ACCOUNT_KEY)
+    if (!raw) {
+      return []
+    }
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter(
+          (account) =>
+            account &&
+            typeof account === 'object' &&
+            typeof account.name === 'string' &&
+            typeof account.username === 'string' &&
+            typeof account.password === 'string'
+        )
+        .map((account) => ({
+          name: account.name.trim(),
+          username: normalizeUsername(account.username),
+          password: account.password,
+        }))
+    }
+  } catch {
+    // Ignore malformed account state.
+  }
+  return []
+}
+
+function writeStoredAccounts(accounts) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.localStorage.setItem(ACCOUNT_KEY, JSON.stringify(accounts))
+}
+
+function isValidPassword(password) {
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(password)
+}
+
+function normalizeUsername(username) {
+  return String(username || '').trim().toLowerCase()
+}
+
+function findStoredAccount(username) {
+  return readStoredAccounts().find((account) => account.username === normalizeUsername(username)) || null
+}
+
+function getDraftStorageKey(username) {
+  const normalized = normalizeUsername(username)
+  return normalized ? `${DRAFT_KEY}-${normalized}` : DRAFT_KEY
+}
 
 function isValidTab(tab) {
   return tab === 'resume' || tab === 'interview' || tab === 'outreach'
@@ -298,8 +355,18 @@ function formatTailoredResumeForCopy(data) {
 
 function App() {
   const [userName, setUserName] = useState('')
+  const [currentUsername, setCurrentUsername] = useState('')
   const [hasEnteredName, setHasEnteredName] = useState(false)
+  const [authMode, setAuthMode] = useState('signin')
   const [nameFormValue, setNameFormValue] = useState('')
+  const [usernameFormValue, setUsernameFormValue] = useState('')
+  const [passwordFormValue, setPasswordFormValue] = useState('')
+  const [confirmPasswordFormValue, setConfirmPasswordFormValue] = useState('')
+  const [authMessage, setAuthMessage] = useState('')
+  const [authMessageType, setAuthMessageType] = useState('info')
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const [profileNameDraft, setProfileNameDraft] = useState('')
+  const [profileSaveNotice, setProfileSaveNotice] = useState('')
   const [activeTab, setActiveTab] = useState('resume')
 
   const [resumeText, setResumeText] = useState('')
@@ -544,11 +611,79 @@ function App() {
     }
   }, [])
 
+  const resetWorkspaceState = useCallback(() => {
+    setActiveTab('resume')
+    setResumeText('')
+    setJobDescription('')
+    setResumeError('')
+    setResumeSuccess('')
+    setResumeDiffPreview([])
+    setMode('behavioral')
+    setSessionId(getInitialSessionId())
+    setInterviewJobDescription('')
+    setInterviewResume('')
+    setPanelModeEnabled(false)
+    setPressureRoundEnabled(false)
+    setCompanyContext('')
+    setRoleContext('')
+    setInterviewDate('')
+    setInterviewViewActive(false)
+    setInterviewStatusMessage('')
+    setInterviewStage('session')
+    setTargetQuestionCount(0)
+    setAnsweredCount(0)
+    setPendingNextQuestion('')
+    setShowFollowUpPreview(false)
+    setShowNextQuestionPreview(false)
+    setWaitingForNextStep(false)
+    setIsAdvancingInterview(false)
+    setFinalEvaluation('')
+    setInterviewComplete(false)
+    setQuestionTrail([])
+    setQuestionTrailIndex(0)
+    setCurrentQuestion('')
+    setCurrentAnswer('')
+    setLastScore(null)
+    setLastFeedback('')
+    setLatestFollowUpQuestion('')
+    setLatestCritique('')
+    setLatestRewrite('')
+    setIsRewriteSpeaking(false)
+    setRewriteSpeechProgress(0)
+    setDebriefActions([])
+    setNextRoundTarget('')
+    setCurriculumPlan([])
+    setAnswerHistory([])
+    setInterviewError('')
+    setGoalInput('')
+    setAgentGoal('')
+    setGoalSubtasks([])
+    setPlanPhase('idle')
+    setOutreachMessageType('follow_up')
+    setOutreachChannel('email')
+    setOutreachTone('professional')
+    setOutreachRecipientName('')
+    setOutreachCompany('')
+    setOutreachRole('')
+    setOutreachNotes('')
+    setFramedMessage('')
+    setOutreachCopyNotice('')
+    setOutreachError('')
+    setOutreachLlmMeta(null)
+  }, [])
+
   useEffect(() => {
-    const savedName = window.localStorage.getItem('aih-user-name')?.trim() || ''
-    if (savedName) {
+    const savedAccounts = readStoredAccounts()
+    if (savedAccounts.length > 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNameFormValue(savedName)
+      setAuthMode('signin')
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthMessage('Use your username and password to sign in, or create a new account with a unique username.')
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthMessageType('info')
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthMode('signup')
     }
 
     const savedWeakAreas = window.localStorage.getItem('aih-weak-areas')
@@ -579,6 +714,12 @@ function App() {
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  useEffect(() => {
+    if (userName) {
+      setProfileNameDraft(userName)
+    }
+  }, [userName])
 
   useEffect(() => {
     return () => {
@@ -644,6 +785,9 @@ function App() {
     if (!hasEnteredName) {
       return
     }
+    if (!currentUsername) {
+      return
+    }
     const t = setTimeout(() => {
       const payload = {
         v: 1,
@@ -701,7 +845,7 @@ function App() {
         },
       }
       try {
-        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(payload))
+        window.localStorage.setItem(getDraftStorageKey(currentUsername), JSON.stringify(payload))
       } catch (err) {
         console.warn('Could not save workspace draft', err)
       }
@@ -710,6 +854,7 @@ function App() {
   }, [
     activeTab,
     hasEnteredName,
+    currentUsername,
     resumeText,
     jobDescription,
     planPhase,
@@ -1180,15 +1325,106 @@ function App() {
   const handleEnterApp = (event) => {
     event.preventDefault()
     const trimmedName = nameFormValue.trim()
-    if (!trimmedName) {
+    const trimmedUsername = normalizeUsername(usernameFormValue)
+    const trimmedPassword = passwordFormValue.trim()
+    const trimmedConfirmPassword = confirmPasswordFormValue.trim()
+    const requiresName = authMode === 'signup'
+    const requiresConfirm = authMode === 'signup' || authMode === 'forgot'
+    if (
+      !trimmedUsername ||
+      !trimmedPassword ||
+      (requiresName && !trimmedName) ||
+      (requiresConfirm && !trimmedConfirmPassword)
+    ) {
+      setAuthMessage(
+        authMode === 'signin'
+          ? 'Username and password are required.'
+          : authMode === 'signup'
+            ? 'Name, username, password, and confirm password are required.'
+            : 'Username, new password, and confirm password are required.'
+      )
+      setAuthMessageType('error')
+      return
+    }
+    if (!isValidPassword(trimmedPassword)) {
+      setAuthMessage(
+        'Password must be at least 8 characters and include a lowercase letter, uppercase letter, and number.'
+      )
+      setAuthMessageType('error')
       return
     }
 
-    setUserName(trimmedName)
+    const savedAccount = findStoredAccount(trimmedUsername)
+    if (authMode === 'signup') {
+      if (savedAccount) {
+        setAuthMessage('That username is already taken. Choose a different username.')
+        setAuthMessageType('error')
+        return
+      }
+      if (trimmedPassword !== trimmedConfirmPassword) {
+        setAuthMessage('Password and confirm password must match.')
+        setAuthMessageType('error')
+        return
+      }
+      const updatedAccounts = [
+        ...readStoredAccounts(),
+        { name: trimmedName, username: trimmedUsername, password: trimmedPassword },
+      ]
+      writeStoredAccounts(updatedAccounts)
+      setAuthMessage('Local account created. You are signed in.')
+      setAuthMessageType('success')
+    } else if (authMode === 'forgot') {
+      if (!savedAccount) {
+        setAuthMessage('That username was not found. Choose sign up to create a new account.')
+        setAuthMessageType('error')
+        return
+      }
+      if (trimmedPassword !== trimmedConfirmPassword) {
+        setAuthMessage('New password and confirm password must match.')
+        setAuthMessageType('error')
+        return
+      }
+      const updatedAccounts = readStoredAccounts().map((account) =>
+        account.username === trimmedUsername
+          ? {
+              ...account,
+              password: trimmedPassword,
+            }
+          : account
+      )
+      writeStoredAccounts(updatedAccounts)
+      setAuthMessage('Password reset. Sign in with your username and new password.')
+      setAuthMessageType('success')
+      setAuthMode('signin')
+      setPasswordFormValue('')
+      setConfirmPasswordFormValue('')
+      return
+    } else if (savedAccount) {
+      if (savedAccount.password !== trimmedPassword) {
+        setAuthMessage('That username or password does not match your saved local account.')
+        setAuthMessageType('error')
+        return
+      }
+      setAuthMessage('Signed in successfully.')
+      setAuthMessageType('success')
+    } else {
+      setAuthMessage('That username was not found. Choose sign up to create a new account.')
+      setAuthMessageType('error')
+      return
+    }
+
+    const resolvedDisplayName = authMode === 'signup' ? trimmedName : savedAccount?.name || trimmedName
+    setUserName(resolvedDisplayName)
+    setCurrentUsername(trimmedUsername)
+    setProfileNameDraft(resolvedDisplayName)
+    setNameFormValue(resolvedDisplayName)
+    setUsernameFormValue(trimmedUsername)
     setHasEnteredName(true)
-    window.localStorage.setItem('aih-user-name', trimmedName)
+    setPasswordFormValue('')
+    setConfirmPasswordFormValue('')
+    resetWorkspaceState()
     try {
-      const raw = window.localStorage.getItem(DRAFT_KEY)
+      const raw = window.localStorage.getItem(getDraftStorageKey(trimmedUsername))
       if (raw) {
         applyWorkspaceDraft(JSON.parse(raw))
       }
@@ -1199,6 +1435,32 @@ function App() {
     if (isValidTab(h)) {
       setActiveTab(h)
     }
+  }
+
+  const handleSaveProfileName = (event) => {
+    event.preventDefault()
+    const trimmedName = profileNameDraft.trim()
+    if (!trimmedName) {
+      setProfileSaveNotice('Name cannot be empty.')
+      return
+    }
+    if (!currentUsername) {
+      setProfileSaveNotice('No signed-in account was found to update.')
+      return
+    }
+
+    const updatedAccounts = readStoredAccounts().map((account) =>
+      account.username === currentUsername
+        ? {
+            ...account,
+            name: trimmedName,
+          }
+        : account
+    )
+    writeStoredAccounts(updatedAccounts)
+    setUserName(trimmedName)
+    setNameFormValue(trimmedName)
+    setProfileSaveNotice('Name updated.')
   }
 
   const goToTab = useCallback((tab) => {
@@ -1770,32 +2032,172 @@ function App() {
   if (!hasEnteredName) {
     return (
       <div className="welcome-page">
-        <section className="welcome-card">
-          <p className="welcome-eyebrow">Agentic Interview Helper</p>
-          <h1>Welcome</h1>
-          <p>Enter your name to open your interview prep workspace.</p>
-          <form onSubmit={handleEnterApp} className="form">
-            <label>
-              Your Name
-              <input
-                type="text"
-                value={nameFormValue}
-                onChange={(event) => setNameFormValue(event.target.value)}
-                placeholder="Enter your name"
-                required
-                autoFocus
-                autoComplete="name"
-              />
-            </label>
-            <p className="welcome-hint">
-              Your name and workspace are saved in this browser. Use links like <code>#interview</code> or{' '}
-              <code>#outreach</code> to open a specific tab.
+        <div className="welcome-orb welcome-orb--left" aria-hidden="true" />
+        <div className="welcome-orb welcome-orb--right" aria-hidden="true" />
+        <div className="welcome-grid">
+          <section className="welcome-hero">
+            <p className="welcome-eyebrow">Agentic Interview Helper</p>
+            <h1>Prepare with clarity. Answer with confidence.</h1>
+            <p className="welcome-copy">
+              Practice sharper answers, hear them back naturally, and step into your interview with a calmer, more
+              polished story.
             </p>
-            <button type="submit">
-              {nameFormValue.trim() ? 'Continue to workspace' : 'Enter app'}
-            </button>
-          </form>
-        </section>
+            <div className="welcome-feature-row" aria-label="Product highlights">
+              <div className="welcome-feature-card">
+                <span className="welcome-feature-card__label">Adaptive practice</span>
+                <strong>Real-time follow-ups</strong>
+                <p>Get dynamic mock questions that react to your answer quality and weak spots.</p>
+              </div>
+              <div className="welcome-feature-card">
+                <span className="welcome-feature-card__label">Answer coaching</span>
+                <strong>Rewrite and listen</strong>
+                <p>Turn rough drafts into stronger interview responses and hear them in a cleaner cadence.</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="welcome-card">
+            <div className="welcome-card__top">
+              <p className="welcome-card__eyebrow">Open your workspace</p>
+            </div>
+            <h2>Lets begin!</h2>
+            <p className="welcome-card__copy">
+              {authMode === 'signup'
+                ? 'Create your local account with a first name and a unique username so the dashboard can greet you personally.'
+                : authMode === 'forgot'
+                  ? 'Reset your local password with your saved username.'
+                  : 'Sign in with your username and password to open your interview prep dashboard.'}
+            </p>
+            <div className="welcome-auth-switch" role="tablist" aria-label="Authentication mode">
+              <button
+                type="button"
+                className={authMode === 'signin' ? 'welcome-auth-switch__item welcome-auth-switch__item--active' : 'welcome-auth-switch__item'}
+                onClick={() => {
+                  setAuthMode('signin')
+                  setAuthMessage('')
+                  setConfirmPasswordFormValue('')
+                }}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className={authMode === 'signup' ? 'welcome-auth-switch__item welcome-auth-switch__item--active' : 'welcome-auth-switch__item'}
+                onClick={() => {
+                  setAuthMode('signup')
+                  setAuthMessage('')
+                }}
+              >
+                Sign up
+              </button>
+            </div>
+            <form onSubmit={handleEnterApp} className="form">
+              {authMode === 'signup' ? (
+                <label>
+                  First Name
+                  <input
+                    type="text"
+                    value={nameFormValue}
+                    onChange={(event) => {
+                      setNameFormValue(event.target.value)
+                      setAuthMessage('')
+                    }}
+                    placeholder="Enter your first name"
+                    required
+                    maxLength={40}
+                    autoFocus
+                    autoComplete="name"
+                  />
+                </label>
+              ) : null}
+              <label>
+                Username
+                <input
+                  type="text"
+                  value={usernameFormValue}
+                  onChange={(event) => {
+                    setUsernameFormValue(event.target.value)
+                    setAuthMessage('')
+                  }}
+                  placeholder="Choose a username"
+                  required
+                  autoFocus={authMode !== 'signup'}
+                  autoComplete="username"
+                  spellCheck={false}
+                />
+              </label>
+              <label>
+                {authMode === 'forgot' ? 'New Password' : 'Password'}
+                <input
+                  type="password"
+                  value={passwordFormValue}
+                  onChange={(event) => {
+                    setPasswordFormValue(event.target.value)
+                    setAuthMessage('')
+                  }}
+                  placeholder={authMode === 'forgot' ? 'Enter your new password' : 'Enter your password'}
+                  required
+                  autoComplete={authMode === 'signin' ? 'current-password' : 'new-password'}
+                />
+              </label>
+              {authMode === 'signup' || authMode === 'forgot' ? (
+                <label>
+                  Confirm Password
+                  <input
+                    type="password"
+                    value={confirmPasswordFormValue}
+                    onChange={(event) => {
+                      setConfirmPasswordFormValue(event.target.value)
+                      setAuthMessage('')
+                    }}
+                    placeholder="Confirm your password"
+                    required
+                    autoComplete="new-password"
+                  />
+                </label>
+              ) : null}
+              <p className="welcome-hint">
+                Your local account is saved in this browser. Passwords must be at least 8 characters and include
+                lowercase, uppercase, and a number. Special characters are allowed. Usernames must be unique. Use links like
+                <code>#interview</code> or <code>#outreach</code> to jump straight into a tab later.
+              </p>
+              {authMode === 'signin' ? (
+                <button
+                  type="button"
+                  className="welcome-link-button"
+                  onClick={() => {
+                    setAuthMode('forgot')
+                    setAuthMessage('')
+                    setPasswordFormValue('')
+                    setConfirmPasswordFormValue('')
+                  }}
+                >
+                  Forgot password?
+                </button>
+              ) : null}
+              {authMessage ? (
+                <p
+                  className={
+                    authMessageType === 'error'
+                      ? 'message message--error welcome-auth-message'
+                      : authMessageType === 'success'
+                        ? 'message message--success welcome-auth-message'
+                        : 'message message--info welcome-auth-message'
+                  }
+                >
+                  {authMessage}
+                </p>
+              ) : null}
+              <button type="submit" className="welcome-submit">
+                {authMode === 'signup'
+                  ? 'Create account'
+                  : authMode === 'forgot'
+                    ? 'Reset password'
+                    : "Let's get started"}
+              </button>
+            </form>
+          </section>
+        </div>
       </div>
     )
   }
@@ -1822,7 +2224,7 @@ function App() {
                 goToTab('interview')
               }}
             >
-              Back to workspace
+              Back to dashboard
             </button>
           </div>
         </header>
@@ -1921,7 +2323,7 @@ function App() {
                         goToTab('interview')
                       }}
                     >
-                      Back to workspace
+                      Back to dashboard
                     </button>
                   </div>
                 </div>
@@ -2096,13 +2498,64 @@ function App() {
         </div>
         <div className="workspace-topbar__actions">
           <span className="workspace-topbar__user">{userName}</span>
-          <button
-            type="button"
-            className="button button--topbar-ghost"
-            onClick={() => setHasEnteredName(false)}
-          >
-            Change name
-          </button>
+          <div className="account-menu">
+            <button
+              type="button"
+              className="button button--topbar-ghost"
+              onClick={() => {
+                setAccountMenuOpen((open) => !open)
+                setProfileNameDraft(userName)
+                setProfileSaveNotice('')
+              }}
+              aria-expanded={accountMenuOpen}
+              aria-controls="account-menu-panel"
+            >
+              Account
+            </button>
+            {accountMenuOpen ? (
+              <div id="account-menu-panel" className="account-menu__panel">
+                <form onSubmit={handleSaveProfileName} className="form account-menu__form">
+                  <label>
+                    Change display name
+                    <input
+                      type="text"
+                      value={profileNameDraft}
+                      onChange={(event) => {
+                        setProfileNameDraft(event.target.value)
+                        setProfileSaveNotice('')
+                      }}
+                      placeholder="Update your name"
+                      required
+                      autoComplete="name"
+                    />
+                  </label>
+                  {profileSaveNotice ? <p className="account-menu__notice">{profileSaveNotice}</p> : null}
+                  <div className="account-menu__actions">
+                    <button type="submit" className="button button--secondary">
+                      Save name
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      onClick={() => {
+                        setHasEnteredName(false)
+                        setCurrentUsername('')
+                        setAccountMenuOpen(false)
+                        setAuthMode('signin')
+                        resetWorkspaceState()
+                        setPasswordFormValue('')
+                        setConfirmPasswordFormValue('')
+                        setAuthMessage('Signed out. Enter your username and password to sign back in.')
+                        setAuthMessageType('info')
+                      }}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : null}
+          </div>
         </div>
       </header>
       <div className="workspace-accent" aria-hidden="true" />
@@ -2144,7 +2597,7 @@ function App() {
           <article className="stat-card">
             <p className="stat-card__label">Latest Score</p>
             <p className="stat-card__value">
-              {lastScore === null ? 'N/A' : `${lastScore}/10 (${getScoreLabel(lastScore)})`}
+              {lastScore === null ? '-' : `${lastScore}/10 (${getScoreLabel(lastScore)})`}
             </p>
           </article>
         </div>
@@ -2183,53 +2636,52 @@ function App() {
           </ul>
         </div>
 
-        <div className="agentic-columns">
-          <div>
-            <h3>Agent Confidence + Rationale</h3>
-            <div className="confidence-grid">
-              {confidenceCards.map((card) => (
-                <article key={card.title} className="stat-card">
-                  <p className="stat-card__label">
-                    {card.title} - {card.confidence} confidence
-                  </p>
-                  <p>{card.rationale}</p>
-                </article>
+        <div>
+          <h3>Agent Confidence + Rationale</h3>
+          <div className="confidence-grid">
+            {confidenceCards.map((card) => (
+              <article key={card.title} className="stat-card">
+                <p className="stat-card__label">
+                  {card.title} - {card.confidence} confidence
+                </p>
+                <p>{card.rationale}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="timeline-wrap">
+          <h3>Goal + Subtask Execution</h3>
+          <form onSubmit={handleSetGoal} className="form">
+            <label>
+              Set Agent Goal
+              <input
+                type="text"
+                value={goalInput}
+                onChange={(event) => setGoalInput(event.target.value)}
+                placeholder="e.g. Get PM-ready behavioral answers"
+              />
+            </label>
+            <button type="submit" className="button button--secondary">
+              Build subtasks
+            </button>
+          </form>
+          {agentGoal ? <p className="muted">Current goal: {agentGoal}</p> : null}
+          {goalSubtasks.length > 0 ? (
+            <ul className="step-list">
+              {goalSubtasks.map((task) => (
+                <li key={task.id} className={`step ${task.done ? 'step--done' : 'step--pending'}`}>
+                  <input
+                    type="checkbox"
+                    checked={task.done}
+                    onChange={() => toggleSubtask(task.id)}
+                    aria-label={task.title}
+                  />
+                  <span>{task.title}</span>
+                </li>
               ))}
-            </div>
-          </div>
-          <div>
-            <h3>Goal + Subtask Execution</h3>
-            <form onSubmit={handleSetGoal} className="form">
-              <label>
-                Set Agent Goal
-                <input
-                  type="text"
-                  value={goalInput}
-                  onChange={(event) => setGoalInput(event.target.value)}
-                  placeholder="e.g. Get PM-ready behavioral answers"
-                />
-              </label>
-              <button type="submit" className="button button--secondary">
-                Build subtasks
-              </button>
-            </form>
-            {agentGoal ? <p className="muted">Current goal: {agentGoal}</p> : null}
-            {goalSubtasks.length > 0 ? (
-              <ul className="step-list">
-                {goalSubtasks.map((task) => (
-                  <li key={task.id} className={`step ${task.done ? 'step--done' : 'step--pending'}`}>
-                    <input
-                      type="checkbox"
-                      checked={task.done}
-                      onChange={() => toggleSubtask(task.id)}
-                      aria-label={task.title}
-                    />
-                    <span>{task.title}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
+            </ul>
+          ) : null}
         </div>
       </section>
 
