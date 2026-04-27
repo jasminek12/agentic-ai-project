@@ -2,7 +2,7 @@
 
 **Agentic Interview Helper** is an **agentic AI** interview copilot: specialized **LLM agents** on the backend (resume, interview, outreach) plus a **goal-oriented UI** on the frontend—plans, progress, and session-aware flows—so the product behaves like an assistant working *with* you, not a single static prompt.
 
-Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM + LaTeX), run an **adaptive behavioral/technical interview** (Groq-backed Q&A with scores and follow-ups), and **professional outreach** drafts via `**POST /frame-message`** (Groq), with a **local template fallback** in the UI if the request fails.
+Full-stack **MVP** for interview prep: **tailor a resume to a job** (structured bullets the user can copy/paste), run an **adaptive behavioral/technical interview** (Groq-backed Q&A with session memory, panel simulation, and follow-ups), and create **professional outreach** drafts via `POST /frame-message` (Groq), with a **local template fallback** in the UI if the request fails.
 
 
 | Layer        | Stack                                                                        |
@@ -10,7 +10,6 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | **Frontend** | React 19, Vite 8 (`job-agent-frontend/`)                                     |
 | **Backend**  | FastAPI, Uvicorn (`job-agent-backend/`)                                      |
 | **LLM**      | Groq API (`llama-3.3-70b-versatile` — see `job-agent-backend/app/config.py`) |
-| **PDF**      | LaTeX → `pdflatex` on the server                                             |
 
 
 **Documentation:** this file provides the overview for the repo. We also have in depth copied in the sub folders in `[job-agent-backend/README.md](job-agent-backend/README.md)` and `[job-agent-frontend/README.md](job-agent-frontend/README.md)`.
@@ -42,10 +41,11 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | Area                      | What it does                                                             | Where it runs                                           |
 | ------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------- |
 | **Welcome**               | Collects display name; optional `localStorage`                           | Frontend only                                           |
-| **Tailor resume**         | Paste resume + JD → download tailored **PDF**                            | `POST /tailor-resume`                                   |
-| **Interview simulator**   | Adaptive Q&A with explicit follow-up/next branching, optional panel/pressure modes, and end-of-session evaluation flow | `POST /start-interview`, `POST /submit-answer`, `POST /advance-interview`          |
-| **Professional outreach** | Purpose, channel, tone, context → LLM draft + copy                       | `POST /frame-message` (fallback: browser templates)     |
-| **Agent-style dashboard** | Progress, insights, goals, weak-area memory, plan timelines (agentic UX) | Mostly **frontend**; interview scores/feedback from API |
+| **Tailor resume**         | Paste resume + JD → tailored summary/experience/skills output to copy/paste | `POST /tailor-resume` |
+| **Interview simulator**   | Adaptive Q&A with follow-up/next branching, optional panel/pressure modes, session resume/pause, end-of-session evaluation | `POST /start-interview`, `POST /submit-answer`, `POST /advance-interview` |
+| **Interview sessions API** | List/get/delete interview sessions for resume/restore flows                | `GET /interview-sessions`, `GET /interview-sessions/{session_id}`, `DELETE /interview-sessions/{session_id}` |
+| **Professional outreach** | Purpose/channel/tone/context → LLM draft + copy. UI supports predefined or custom purpose (`Other`) | `POST /frame-message` (fallback: browser templates) |
+| **Agent-style dashboard** | Compact progress/insights strip, details on demand, live status hints      | Mostly **frontend**; interview/orchestration metadata from API |
 
 
 ---
@@ -60,8 +60,8 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (PDF via LLM
 | **Specialized agents**      | Separate agent modules for **resume tailoring**, **interview Q&A** (generate + evaluate), and **outreach framing** (`app/agents/`).                                              |
 | **Stateful interview loop** | Each `session_id` keeps **conversation memory**; new questions and feedback depend on prior answers and scores (`storage/` + `memory.py`).                                       |
 | **Adaptive coaching**       | Difficulty and follow-up style adapt to recent answers, weak topics, optional panel personas, and optional pressure simulation.                                                    |
-| **Tool-style outcomes**     | Resume path: LLM → structured content → **LaTeX / `pdflatex`** → PDF download.                                                                                                   |
-| **Goal-oriented UI**        | Welcome flow, tabs, **workflow progress**, **plan timelines**, goals/subtasks, and heuristics that mirror “what the agent is doing next” (see `job-agent-frontend/src/App.jsx`). |
+| **Tool-style outcomes**     | Resume path: LLM returns structured, copy-ready tailoring output; interview path returns critique/rewrite/follow-ups and completion plans.                                         |
+| **Goal-oriented UI**        | Welcome flow, tabs, compact workflow status, panel simulation mode, resume/continue prompts, interview transcript view, and heuristics that mirror “what the agent is doing next”. |
 | **Grounded outreach**       | `/frame-message` returns **message + confidence + rationale** so the user sees a trace of *why* the draft fits (when the API succeeds).                                          |
 
 
@@ -71,7 +71,7 @@ This is still an **MVP**: agents are orchestrated in code (not a general-purpose
 
 ## Architecture
 
-The diagram shows how the **agentic backend** (multiple LLM-driven flows + memory + PDF tooling) connects to the **copilot UI**.
+The diagram shows how the **agentic backend** (multiple LLM-driven flows + session memory) connects to the **copilot UI**.
 
 ```mermaid
 flowchart LR
@@ -82,14 +82,12 @@ flowchart LR
     FastAPI[FastAPI]
     Agents[Resume + Interview + Outreach agents]
     Mem[(Per-session memory)]
-    PDF[LaTeX / pdflatex]
   end
   Groq[Groq API]
-  UI -->|JSON / PDF| FastAPI
+  UI -->|JSON| FastAPI
   FastAPI --> Agents
   Agents --> Groq
   Agents --> Mem
-  Agents --> PDF
 ```
 
 
@@ -101,15 +99,15 @@ flowchart LR
 ```text
 agentic-interview-helper/     # project root (your clone folder name may differ)
 ├── README.md                 ← this file (repo home on GitHub/GitLab)
-├── job-agent-backend/        # FastAPI + Groq + PDF pipeline
+├── job-agent-backend/        # FastAPI + Groq + session memory
 │   ├── app/
 │   │   ├── main.py           # App, CORS, routers
 │   │   ├── config.py       # GROQ_* , paths (fails fast if GROQ_API_KEY missing)
 │   │   ├── schemas.py      # Request/response models
 │   │   ├── routes/         # resume, interview, outreach
 │   │   ├── agents/         # resume_agent, interview_agent, outreach_agent
-│   │   └── utils/          # llm, latex, memory
-│   ├── storage/            # memory + PDF outputs (runtime)
+│   │   └── utils/          # llm, memory (+ legacy latex helper)
+│   ├── storage/            # interview memory/session artifacts (runtime, e.g. memory_*.json)
 │   ├── requirements.txt
 │   └── README.md
 └── job-agent-frontend/       # React + Vite SPA
@@ -126,7 +124,6 @@ agentic-interview-helper/     # project root (your clone folder name may differ)
 - **Python 3.10+** (virtualenv or Conda is fine)
 - **Node.js 18+**
 - A **Groq** account and API key
-- `**pdflatex`** installed and on your `**PATH**` (required for resume PDFs)
 
 ---
 
@@ -188,8 +185,8 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
 |                |                                                              |
 | -------------- | ------------------------------------------------------------ |
 | **Body**       | JSON: `{ "resume_text": string, "job_description": string }` |
-| **Success**    | **Binary PDF** (`application/pdf`), not a JSON path          |
-| **Client tip** | Use `fetch` → `response.blob()` → object URL + download      |
+| **Success**    | JSON with structured tailored output (summary, experience bullet suggestions, skills) |
+| **Client tip** | Render output in the UI and let users copy/paste into their resume editor |
 
 
 ### `POST /start-interview`
@@ -198,7 +195,7 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
 |             |                                                                                                                   |
 | ----------- | ----------------------------------------------------------------------------------------------------------------- |
 | **Body**    | JSON: `{ "mode": "behavioral" | "technical", "session_id": string, "job_description": string, "resume": string, "panel_mode"?: bool, "pressure_round"?: bool, "company_context"?: string, "role_context"?: string, "interview_date"?: "YYYY-MM-DD" }` |
-| **Success** | JSON: `{ "question": string, "interview_started": true, "target_question_count": number }`                      |
+| **Success** | JSON: `{ "question": string, "persona": string, "interview_started": true, "target_question_count": number }`                      |
 | **Notes**   | Resets server-side memory for that `session_id` and generates the first question.                                 |
 
 
@@ -238,9 +235,19 @@ Base URL (local): `http://127.0.0.1:8000`. Errors are typically JSON: `{ "error"
 |             |                                                                                                    |
 | ----------- | -------------------------------------------------------------------------------------------------- |
 | **Body**    | JSON: `{ "session_id": string, "choice": "follow_up" | "next_question" }`                         |
-| **Success** | JSON: `{ "question": string }`                                                                     |
+| **Success** | JSON: `{ "question": string, "persona": string }`                                                                     |
 | **Notes**   | Required only when `/submit-answer` returns `waiting_for_next_step=true`; commits selected branch. |
 
+
+### Interview session lifecycle
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /interview-sessions?limit=30` | List recent sessions (mode, completion, counts, updated time). |
+| `GET /interview-sessions/{session_id}` | Load full persisted session memory for resume/restore flows. |
+| `DELETE /interview-sessions/{session_id}` | Delete a persisted session. |
+
+---
 
 ### `POST /frame-message`
 
@@ -287,9 +294,8 @@ The app defaults the API to `**http://127.0.0.1:8000**`. To point elsewhere, set
 
 ## Persistence & storage
 
-- **Interview:** state is kept per `**session_id`** under `job-agent-backend/storage/` (see `app/utils/memory.py`).
-- **Resume PDFs:** written under `job-agent-backend/storage/outputs/` during tailoring.
-- **Browser:** name and weak-area hints may be stored in `**localStorage`** (frontend only).
+- **Interview:** state is kept per `session_id` under `job-agent-backend/storage/` (see `app/utils/memory.py`).
+- **Browser:** account/session hints, lightweight workspace drafts, and interview archive metadata may be stored in `localStorage` (frontend only).
 
 Add `storage/` patterns to `.gitignore` if you do not want runtime artifacts committed (evaluate per your team’s preference).
 
@@ -310,7 +316,7 @@ Add `storage/` patterns to `.gitignore` if you do not want runtime artifacts com
 | -------------------------------------------- | -------------------------------------------------------------------------- |
 | `ModuleNotFoundError: No module named 'app'` | `cd job-agent-backend` before `uvicorn app.main:app ...`                   |
 | Backend crashes on import                    | Set `GROQ_API_KEY` before starting (required by `config.py`).              |
-| Resume PDF fails                             | Ensure `pdflatex` is installed and on `PATH`.                              |
+| `Failed to start interview.`                 | Check backend logs. Common cause: Groq 429 rate limit; backend now falls back to starter/follow-up questions when possible. |
 | Frontend cannot reach API                    | Confirm backend is up; set `VITE_API_BASE_URL` if not on `127.0.0.1:8000`. |
 | CORS in production                           | Replace `allow_origins=["*"]` with your frontend URL.                      |
 

@@ -2,11 +2,11 @@
 
 > **Project overview:** see the repo root [README.md](../README.md).
 
-**Agentic AI backend:** multiple **LLM agents** (resume, interview, outreach), **session memory** for adaptive interviews, and a **PDF toolchain**—see root README section *What makes this agentic AI?*
+**Agentic AI backend:** multiple **LLM agents** (resume, interview, outreach) with **session memory** for adaptive interviews and session lifecycle endpoints.
 
 Backend MVP for:
 
-- Resume tailoring and **PDF download** (`POST /tailor-resume`)
+- Resume tailoring with structured output (`POST /tailor-resume`)
 - Adaptive interview simulation (`behavioral` / `technical`) with **per-session memory** and explicit follow-up branching (`POST /start-interview`, `POST /submit-answer`, `POST /advance-interview`) plus session management endpoints (`GET /interview-sessions`, `GET /interview-sessions/{session_id}`, `DELETE /interview-sessions/{session_id}`)
 - **Professional outreach** drafts via Groq (`POST /frame-message`)
 
@@ -33,8 +33,8 @@ job-agent-backend/
 │       ├── latex.py
 │       └── memory.py
 ├── storage/
-│   ├── memory.json
-│   └── outputs/
+│   ├── memory_*.json
+│   └── outputs/          # optional/legacy artifacts if generated locally
 ├── requirements.txt
 └── README.md
 ```
@@ -60,7 +60,7 @@ job-agent-backend/
    $env:GROQ_API_KEY="your_groq_api_key"
    ```
 
-4. Ensure `pdflatex` is installed and on your `PATH` (required for resume PDF generation).
+4. No extra system dependency is required for the current structured resume output flow.
 
 ## Run Server
 
@@ -85,7 +85,7 @@ API docs (when the server is running):
 
 ### 1) `POST /tailor-resume`
 
-Tailors the resume to the job description and returns a **PDF file** for download (not a JSON path).
+Tailors the resume to the job description and returns structured content the UI can render/copy.
 
 **Request** (`application/json`):
 
@@ -96,13 +96,21 @@ Tailors the resume to the job description and returns a **PDF file** for downloa
 }
 ```
 
-**Response**
+**Response** (`application/json`)
 
-- Status `200`
-- Body: **binary PDF** (`Content-Disposition` / filename `tailored_resume.pdf` from the server)
-- Errors: JSON `{ "error": "..." }` with `4xx` / `5xx` as applicable
-
-The frontend typically uses `fetch` + `response.blob()` and triggers a browser download.
+```json
+{
+  "summary": "Backend engineer focused on reliable Python APIs...",
+  "experience": [
+    {
+      "title": "Backend Engineer",
+      "company": "Acme",
+      "points": ["Improved API latency by 35% using query/index tuning."]
+    }
+  ],
+  "skills": ["Python", "FastAPI", "PostgreSQL"]
+}
+```
 
 ---
 
@@ -134,6 +142,7 @@ Starts (or resets) an interview for a given **`session_id`** and returns the fir
 ```json
 {
   "question": "Tell me about a time you handled a difficult stakeholder.",
+  "persona": "recruiter",
   "interview_started": true,
   "target_question_count": 7
 }
@@ -201,7 +210,8 @@ Commits the candidate's branch choice after `/submit-answer` returns `waiting_fo
 
 ```json
 {
-  "question": "Can you quantify the business impact of your communication changes?"
+  "question": "Can you quantify the business impact of your communication changes?",
+  "persona": "hiring_manager"
 }
 ```
 
@@ -264,5 +274,6 @@ Generates a recruiter- or hiring-manager-ready message (email or LinkedIn style)
 
 - Mode is chosen by the client (`behavioral` or `technical`), not inferred by the LLM alone.
 - Interview history is persisted per `session_id` (see `app/utils/memory.py` and files under `storage/`).
-- Generated PDFs are written under `storage/outputs/` during tailoring.
+- Session files are persisted under `storage/memory_*.json`.
+- If Groq is rate-limited (`429`), interview routes can fall back to starter/follow-up question templates.
 - `/frame-message` does not persist state; each call is independent.
