@@ -98,23 +98,46 @@ flowchart LR
 
 ```text
 agentic-interview-helper/     # project root (your clone folder name may differ)
-├── README.md                 ← this file (repo home on GitHub/GitLab)
-├── job-agent-backend/        # FastAPI + Groq + session memory
+├── README.md                 # repo overview, setup, API summary
+├── .gitignore                # git ignore patterns for repo-wide artifacts
+├── job-agent-backend/        # FastAPI backend: resume/interview/outreach APIs
 │   ├── app/
-│   │   ├── main.py           # App, CORS, routers
-│   │   ├── config.py       # GROQ_* , paths (fails fast if GROQ_API_KEY missing)
-│   │   ├── schemas.py      # Request/response models
-│   │   ├── routes/         # resume, interview, outreach
-│   │   ├── agents/         # resume_agent, interview_agent, outreach_agent
-│   │   └── utils/          # llm, memory (+ legacy latex helper)
-│   ├── storage/            # interview memory/session artifacts (runtime, e.g. memory_*.json)
-│   ├── requirements.txt
-│   └── README.md
-└── job-agent-frontend/       # React + Vite SPA
-    ├── src/                  # App.jsx, styles
-    ├── package.json
-    ├── .env.example          # VITE_API_BASE_URL
-    └── README.md
+│   │   ├── __init__.py       # package marker
+│   │   ├── main.py           # FastAPI app, CORS config, router registration
+│   │   ├── config.py         # environment + model/path configuration
+│   │   ├── schemas.py        # Pydantic request/response models
+│   │   ├── routes/
+│   │   │   ├── resume_routes.py      # /tailor-resume endpoint
+│   │   │   ├── interview_routes.py   # /start-interview, /submit-answer, /advance-interview, session APIs
+│   │   │   └── outreach_routes.py    # /frame-message endpoint
+│   │   ├── agents/
+│   │   │   ├── resume_agent.py       # resume tailoring logic
+│   │   │   ├── interview_agent.py    # interview question/evaluation logic
+│   │   │   └── outreach_agent.py     # outreach draft generation logic
+│   │   └── utils/
+│   │       ├── llm.py                # Groq LLM call helpers
+│   │       ├── memory.py             # per-session memory file persistence
+│   │       └── latex.py              # legacy latex helper utilities
+│   ├── storage/               # runtime artifacts
+│   │   ├── memory_*.json      # per-session interview memory snapshots
+│   │   └── outputs/           # optional/legacy generated output files
+│   ├── requirements.txt       # Python dependencies
+│   └── README.md              # backend-specific setup and API details
+└── job-agent-frontend/        # React + Vite single-page app
+    ├── src/
+    │   ├── App.jsx            # main UI + interview/outreach/resume flows
+    │   ├── App.css            # app-level styles
+    │   ├── index.css          # global styles
+    │   ├── main.jsx           # React entrypoint
+    │   └── assets/            # static app assets used by UI
+    ├── public/
+    │   ├── favicon.svg        # browser tab icon
+    │   └── icons.svg          # static icon sprite/assets
+    ├── package.json           # npm scripts and frontend dependencies
+    ├── package-lock.json      # dependency lockfile
+    ├── vite.config.js         # Vite configuration
+    ├── .env.example           # example frontend env vars (VITE_API_BASE_URL)
+    └── README.md              # frontend-specific setup and usage
 ```
 
 ---
