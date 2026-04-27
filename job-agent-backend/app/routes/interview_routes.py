@@ -29,6 +29,41 @@ from app.utils.memory import delete_memory, list_memory_sessions, load_memory, m
 router = APIRouter(prefix="", tags=["interview"])
 
 
+def _fallback_starter_question(mode: str, panel_personas: list[str] | None = None) -> dict:
+    persona = (panel_personas or ["interviewer"])[0]
+    if mode == "technical":
+        return {
+            "question": "Walk me through a recent technical project and explain one key architecture decision you made.",
+            "focus_area": "technical decision-making",
+            "persona": persona,
+        }
+    return {
+        "question": "Tell me about a time you had to prioritize multiple competing tasks under pressure.",
+        "focus_area": "prioritization and communication",
+        "persona": persona,
+    }
+
+
+def _fallback_follow_up(question: str) -> str:
+    return f"Thanks. Can you share one measurable outcome from that example? (Follow-up to: {question})"
+
+
+def _fallback_next_question(mode: str, panel_personas: list[str] | None = None, turn_index: int = 0) -> dict:
+    personas = panel_personas or ["interviewer"]
+    persona = personas[turn_index % len(personas)]
+    if mode == "technical":
+        return {
+            "question": "How would you debug a production issue when logs are noisy and time is limited?",
+            "focus_area": "debugging under pressure",
+            "persona": persona,
+        }
+    return {
+        "question": "Describe a time you had to influence someone without direct authority.",
+        "focus_area": "influence and stakeholder alignment",
+        "persona": persona,
+    }
+
+
 @router.get(
     "/interview-sessions",
     response_model=InterviewSessionListResponse,
@@ -153,18 +188,21 @@ def start_interview(payload: StartInterviewRequest):
         memory["pending_next_step"] = {}
         memory["interview_complete"] = False
 
-        first_question = generate_question(
-            payload.mode,
-            payload.job_description,
-            payload.resume,
-            memory["history"],
-            panel_mode=payload.panel_mode,
-            pressure_round=payload.pressure_round,
-            company_context=payload.company_context,
-            role_context=payload.role_context,
-            panel_personas=memory.get("panel_personas", []),
-            panel_turn_index=memory.get("panel_turn_index", 0),
-        )
+        try:
+            first_question = generate_question(
+                payload.mode,
+                payload.job_description,
+                payload.resume,
+                memory["history"],
+                panel_mode=payload.panel_mode,
+                pressure_round=payload.pressure_round,
+                company_context=payload.company_context,
+                role_context=payload.role_context,
+                panel_personas=memory.get("panel_personas", []),
+                panel_turn_index=memory.get("panel_turn_index", 0),
+            )
+        except RuntimeError:
+            first_question = _fallback_starter_question(payload.mode, memory.get("panel_personas", []))
         memory["history"].append(
             {
                 "question": first_question["question"],
@@ -286,25 +324,35 @@ def submit_answer(payload: SubmitAnswerRequest):
                 history, memory.get("mode", "behavioral")
             )
         else:
-            follow_up_question = generate_follow_up(
-                current_item["question"],
-                payload.answer,
-                evaluation["weak_topics"],
-                pressure_round=bool(memory.get("pressure_round", False)),
-                score=evaluation["score"],
-            )
-            next_question = generate_question(
-                memory["mode"],
-                memory["job_description"],
-                memory["resume"],
-                history,
-                panel_mode=bool(memory.get("panel_mode", False)),
-                pressure_round=bool(memory.get("pressure_round", False)),
-                company_context=memory.get("company_context", ""),
-                role_context=memory.get("role_context", ""),
-                panel_personas=memory.get("panel_personas", []),
-                panel_turn_index=int(memory.get("panel_turn_index", 0)),
-            )
+            try:
+                follow_up_question = generate_follow_up(
+                    current_item["question"],
+                    payload.answer,
+                    evaluation["weak_topics"],
+                    pressure_round=bool(memory.get("pressure_round", False)),
+                    score=evaluation["score"],
+                )
+            except RuntimeError:
+                follow_up_question = _fallback_follow_up(current_item["question"])
+            try:
+                next_question = generate_question(
+                    memory["mode"],
+                    memory["job_description"],
+                    memory["resume"],
+                    history,
+                    panel_mode=bool(memory.get("panel_mode", False)),
+                    pressure_round=bool(memory.get("pressure_round", False)),
+                    company_context=memory.get("company_context", ""),
+                    role_context=memory.get("role_context", ""),
+                    panel_personas=memory.get("panel_personas", []),
+                    panel_turn_index=int(memory.get("panel_turn_index", 0)),
+                )
+            except RuntimeError:
+                next_question = _fallback_next_question(
+                    memory.get("mode", "behavioral"),
+                    memory.get("panel_personas", []),
+                    int(memory.get("panel_turn_index", 0)),
+                )
             memory["pending_next_step"] = {
                 "follow_up_question": follow_up_question,
                 "next_question": next_question["question"],

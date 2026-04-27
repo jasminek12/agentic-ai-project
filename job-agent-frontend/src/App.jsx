@@ -132,6 +132,14 @@ function formatDateTime(value) {
   return date.toLocaleString()
 }
 
+const PANEL_INTERVIEWERS = [
+  { id: 'recruiter', name: 'Avery', role: 'HR Recruiter', icon: '👩‍💼' },
+  { id: 'manager', name: 'Jordan', role: 'Senior Manager', icon: '👨‍💼' },
+  { id: 'lead', name: 'Riley', role: 'Tech Lead', icon: '🧑‍💻' },
+  { id: 'pm', name: 'Morgan', role: 'Project Manager', icon: '👩‍💻' },
+  { id: 'partner', name: 'Casey', role: 'Engineering Partner', icon: '👨‍🔧' },
+]
+
 function isValidTab(tab) {
   return tab === 'resume' || tab === 'interview' || tab === 'outreach'
 }
@@ -463,7 +471,8 @@ function App() {
   const [answeredCount, setAnsweredCount] = useState(0)
   const [pendingNextQuestion, setPendingNextQuestion] = useState('')
   const [showFollowUpPreview, setShowFollowUpPreview] = useState(false)
-  const [showNextQuestionPreview, setShowNextQuestionPreview] = useState(false)
+  const [selectedFollowUpPreviewIndex, setSelectedFollowUpPreviewIndex] = useState(0)
+  const [showFollowUpExpectedAnswer, setShowFollowUpExpectedAnswer] = useState(false)
   const [waitingForNextStep, setWaitingForNextStep] = useState(false)
   const [isAdvancingInterview, setIsAdvancingInterview] = useState(false)
   const [finalEvaluation, setFinalEvaluation] = useState('')
@@ -477,6 +486,7 @@ function App() {
   const [latestFollowUpQuestion, setLatestFollowUpQuestion] = useState('')
   const [latestCritique, setLatestCritique] = useState('')
   const [latestRewrite, setLatestRewrite] = useState('')
+  const [showLatestRewrite, setShowLatestRewrite] = useState(false)
   const [isRewriteSpeaking, setIsRewriteSpeaking] = useState(false)
   const [isRewritePaused, setIsRewritePaused] = useState(false)
   const [rewriteSpeechProgress, setRewriteSpeechProgress] = useState(0)
@@ -495,10 +505,14 @@ function App() {
   const [interviewSessionsArchive, setInterviewSessionsArchive] = useState([])
   const [resumePromptAcknowledgedSessionId, setResumePromptAcknowledgedSessionId] = useState('')
   const [interviewHistoryPanelOpen, setInterviewHistoryPanelOpen] = useState(false)
+  const [activePanelistIndex, setActivePanelistIndex] = useState(0)
+  const [panelReactionText, setPanelReactionText] = useState('')
+  const [isPanelAutoAdvancing, setIsPanelAutoAdvancing] = useState(false)
 
-  const [outreachMessageType, setOutreachMessageType] = useState('follow_up')
-  const [outreachChannel, setOutreachChannel] = useState('email')
-  const [outreachTone, setOutreachTone] = useState('professional')
+  const [outreachMessageType, setOutreachMessageType] = useState('')
+  const [outreachOtherPurpose, setOutreachOtherPurpose] = useState('')
+  const [outreachChannel, setOutreachChannel] = useState('')
+  const [outreachTone, setOutreachTone] = useState('')
   const [outreachRecipientName, setOutreachRecipientName] = useState('')
   const [outreachCompany, setOutreachCompany] = useState('')
   const [outreachRole, setOutreachRole] = useState('')
@@ -653,8 +667,13 @@ function App() {
     }
     if (d.outreach) {
       const o = d.outreach
-      if (['follow_up', 'thank_you', 'cold', 'connection', 'schedule'].includes(o.outreachMessageType)) {
+      if (
+        ['follow_up', 'thank_you', 'cold', 'connection', 'schedule', 'other'].includes(o.outreachMessageType)
+      ) {
         setOutreachMessageType(o.outreachMessageType)
+      }
+      if (typeof o.outreachOtherPurpose === 'string') {
+        setOutreachOtherPurpose(o.outreachOtherPurpose)
       }
       if (o.outreachChannel === 'email' || o.outreachChannel === 'linkedin') {
         setOutreachChannel(o.outreachChannel)
@@ -715,7 +734,8 @@ function App() {
     setAnsweredCount(0)
     setPendingNextQuestion('')
     setShowFollowUpPreview(false)
-    setShowNextQuestionPreview(false)
+    setSelectedFollowUpPreviewIndex(0)
+    setShowFollowUpExpectedAnswer(false)
     setWaitingForNextStep(false)
     setIsAdvancingInterview(false)
     setFinalEvaluation('')
@@ -736,15 +756,19 @@ function App() {
     setNextRoundTarget('')
     setCurriculumPlan([])
     setResumePromptAcknowledgedSessionId('')
+    setActivePanelistIndex(0)
+    setPanelReactionText('')
+    setIsPanelAutoAdvancing(false)
     setAnswerHistory([])
     setInterviewError('')
     setGoalInput('')
     setAgentGoal('')
     setGoalSubtasks([])
     setPlanPhase('idle')
-    setOutreachMessageType('follow_up')
-    setOutreachChannel('email')
-    setOutreachTone('professional')
+    setOutreachMessageType('')
+    setOutreachOtherPurpose('')
+    setOutreachChannel('')
+    setOutreachTone('')
     setOutreachRecipientName('')
     setOutreachCompany('')
     setOutreachRole('')
@@ -929,6 +953,7 @@ function App() {
           outreachMessageType,
           outreachChannel,
           outreachTone,
+          outreachOtherPurpose,
           outreachRecipientName,
           outreachCompany,
           outreachRole,
@@ -989,6 +1014,7 @@ function App() {
     outreachMessageType,
     outreachChannel,
     outreachTone,
+    outreachOtherPurpose,
     outreachRecipientName,
     outreachCompany,
     outreachRole,
@@ -1433,6 +1459,40 @@ function App() {
     Boolean(currentQuestion || waitingForNextStep || (answeredCount > 0 && !interviewComplete)) &&
     !interviewViewActive &&
     sessionId !== resumePromptAcknowledgedSessionId
+  const activeQuestionNumber = useMemo(() => {
+    if (!currentQuestion) {
+      return Math.max(1, answeredCount || 1)
+    }
+    if (waitingForNextStep) {
+      return Math.max(1, answeredCount)
+    }
+    return Math.max(1, answeredCount + 1)
+  }, [answeredCount, currentQuestion, waitingForNextStep])
+  const followUpPromptLabel = `Follow-up for Q${Math.max(1, answeredCount)}`
+  const followUpPreviewOptions = useMemo(() => {
+    if (!latestFollowUpQuestion) {
+      return []
+    }
+    const base = latestFollowUpQuestion.trim()
+    if (!base) {
+      return []
+    }
+    return [
+      { label: 'Core follow-up', text: base },
+      {
+        label: 'Impact follow-up',
+        text: `What measurable impact came from that approach? (${base})`,
+      },
+      {
+        label: 'Trade-off follow-up',
+        text: `What trade-offs did you evaluate before deciding? (${base})`,
+      },
+    ]
+  }, [latestFollowUpQuestion])
+  const selectedFollowUpPreview = followUpPreviewOptions[selectedFollowUpPreviewIndex] || null
+  const isPanelSimulationActive = panelModeEnabled && interviewStage === 'session'
+  const panelBubbleText =
+    isPanelSimulationActive && isPanelAutoAdvancing && panelReactionText ? panelReactionText : currentQuestion
   const interviewTranscriptItems = useMemo(() => {
     const historyItems = answerHistory.map((item) => ({
       question: item.question || '',
@@ -1703,7 +1763,8 @@ function App() {
     setTargetQuestionCount(0)
     setPendingNextQuestion('')
     setShowFollowUpPreview(false)
-    setShowNextQuestionPreview(false)
+    setSelectedFollowUpPreviewIndex(0)
+    setShowFollowUpExpectedAnswer(false)
     setWaitingForNextStep(false)
     setFinalEvaluation('')
     setInterviewComplete(false)
@@ -1717,11 +1778,15 @@ function App() {
     setLatestFollowUpQuestion('')
     setLatestCritique('')
     setLatestRewrite('')
+    setShowLatestRewrite(false)
     setDebriefActions([])
     setNextRoundTarget('')
     setCurriculumPlan([])
     setResumePromptAcknowledgedSessionId('')
     setInterviewHistoryPanelOpen(false)
+    setActivePanelistIndex(0)
+    setPanelReactionText('')
+    setIsPanelAutoAdvancing(false)
     const id = createSessionId()
     setSessionId(id)
     try {
@@ -1747,6 +1812,9 @@ function App() {
       const memory = data?.memory || {}
       const memoryHistory = Array.isArray(memory.history) ? memory.history : []
       const pending = memory.pending_next_step && typeof memory.pending_next_step === 'object' ? memory.pending_next_step : {}
+      const hasPendingDecision = Boolean(
+        typeof pending.follow_up_question === 'string' && pending.follow_up_question.trim()
+      ) || Boolean(typeof pending.next_question === 'string' && pending.next_question.trim())
       const lastAnswered = [...memoryHistory].reverse().find((item) => item && item.answer)
       const pendingItem = [...memoryHistory].reverse().find((item) => item && !item.answer)
       const questions = memoryHistory
@@ -1777,7 +1845,7 @@ function App() {
       setInterviewDate(typeof memory.interview_date === 'string' ? memory.interview_date : '')
       setQuestionTrail(questions)
       setQuestionTrailIndex(Math.max(0, questions.length - 1))
-      setCurrentQuestion(typeof pendingItem?.question === 'string' ? pendingItem.question : '')
+      setCurrentQuestion(hasPendingDecision ? '' : typeof pendingItem?.question === 'string' ? pendingItem.question : '')
       setCurrentAnswer('')
       setAnswerHistory(mappedAnswerHistory)
       setAnsweredCount(Number(memory.answered_count) || mappedAnswerHistory.length)
@@ -1795,9 +1863,20 @@ function App() {
       setInterviewStatusMessage('Resumed from saved session.')
       setResumePromptAcknowledgedSessionId(targetSessionId)
       setInterviewHistoryPanelOpen(false)
+      setActivePanelistIndex(Math.max(0, mappedAnswerHistory.length % PANEL_INTERVIEWERS.length))
+      setPanelReactionText('')
+      setIsPanelAutoAdvancing(false)
       setInterviewViewActive(true)
       setActiveTab('interview')
       setAccountMenuOpen(false)
+      if (Boolean(memory.panel_mode) && hasPendingDecision) {
+        const autoChoice = pending.follow_up_question ? 'follow_up' : 'next_question'
+        setIsPanelAutoAdvancing(true)
+        setInterviewStatusMessage('Resumed session. Panel is bringing the next question...')
+        window.setTimeout(() => {
+          void handleAdvanceInterview(autoChoice, true)
+        }, 350)
+      }
     } catch (error) {
       setInterviewError(error.message || 'Failed to load interview session.')
     }
@@ -1809,6 +1888,7 @@ function App() {
     }
     setIsRewriteSpeaking(false)
     setIsRewritePaused(false)
+    setIsPanelAutoAdvancing(false)
     setInterviewViewActive(false)
     setInterviewHistoryPanelOpen(false)
     setInterviewStatusMessage('Session paused. You can continue this interview from the dashboard.')
@@ -1916,6 +1996,24 @@ function App() {
   const composeOutreach = async () => {
     setOutreachCopyNotice('')
     setOutreachError('')
+    if (
+      !['follow_up', 'thank_you', 'cold', 'connection', 'schedule', 'other'].includes(outreachMessageType)
+    ) {
+      setOutreachError('Choose a message purpose to generate a draft.')
+      return
+    }
+    if (outreachMessageType === 'other' && !outreachOtherPurpose.trim()) {
+      setOutreachError('Enter a purpose for “Other” to generate a draft.')
+      return
+    }
+    if (outreachChannel !== 'email' && outreachChannel !== 'linkedin') {
+      setOutreachError('Choose a channel to generate a draft.')
+      return
+    }
+    if (!['professional', 'warm', 'concise'].includes(outreachTone)) {
+      setOutreachError('Choose a tone to generate a draft.')
+      return
+    }
     const hasContext = Boolean(
       outreachRole.trim() ||
         outreachCompany.trim() ||
@@ -1929,20 +2027,29 @@ function App() {
       return
     }
 
+    const derivedMessageType = outreachMessageType === 'other' ? 'cold' : outreachMessageType
+    const derivedNotes = [
+      outreachMessageType === 'other' ? `Purpose: ${outreachOtherPurpose.trim()}` : '',
+      outreachNotes,
+    ]
+      .filter(Boolean)
+      .join('\n')
+      .trim()
+
     setIsFramingOutreach(true)
     try {
       const response = await fetch(`${API_BASE_URL}/frame-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message_type: outreachMessageType,
+          message_type: derivedMessageType,
           channel: outreachChannel,
           tone: outreachTone,
           sender_name: userName,
           recipient_name: outreachRecipientName,
           company: outreachCompany,
           role: outreachRole,
-          notes: outreachNotes,
+          notes: derivedNotes,
         }),
       })
 
@@ -1966,13 +2073,13 @@ function App() {
       setOutreachLlmMeta(null)
       setFramedMessage(
         buildOutreachMessage({
-          messageType: outreachMessageType,
+          messageType: derivedMessageType,
           channel: outreachChannel,
           recipientName: outreachRecipientName,
           company: outreachCompany,
           role: outreachRole,
           senderName: userName,
-          notes: outreachNotes,
+          notes: derivedNotes,
           tone: outreachTone,
         })
       )
@@ -2022,12 +2129,14 @@ function App() {
     setLatestFollowUpQuestion('')
     setLatestCritique('')
     setLatestRewrite('')
+    setShowLatestRewrite(false)
     setDebriefActions([])
     setNextRoundTarget('')
     setCurriculumPlan([])
     setPendingNextQuestion('')
     setShowFollowUpPreview(false)
-    setShowNextQuestionPreview(false)
+    setSelectedFollowUpPreviewIndex(0)
+    setShowFollowUpExpectedAnswer(false)
     setWaitingForNextStep(false)
     setAnsweredCount(0)
     setTargetQuestionCount(0)
@@ -2095,6 +2204,9 @@ function App() {
       setCurrentQuestion(data.question || '')
       setQuestionTrail(data.question ? [data.question] : [])
       setQuestionTrailIndex(0)
+      setActivePanelistIndex(0)
+      setPanelReactionText('')
+      setIsPanelAutoAdvancing(false)
       setInterviewViewActive(true)
       setInterviewStatusMessage(data.interview_started ? 'Interview started.' : '')
       setInterviewStage('session')
@@ -2172,10 +2284,13 @@ function App() {
       setLatestFollowUpQuestion(data.follow_up_question ?? '')
       setPendingNextQuestion(data.next_question ?? '')
       setShowFollowUpPreview(false)
-      setShowNextQuestionPreview(false)
-      setWaitingForNextStep(Boolean(data.waiting_for_next_step))
+      setSelectedFollowUpPreviewIndex(0)
+      setShowFollowUpExpectedAnswer(false)
+      const shouldWaitForNextStep = Boolean(data.waiting_for_next_step)
+      setWaitingForNextStep(shouldWaitForNextStep)
       setLatestCritique(data.critique ?? '')
       setLatestRewrite(data.rewrite ?? '')
+      setShowLatestRewrite(false)
       setDebriefActions(Array.isArray(data.debrief_actions) ? data.debrief_actions.slice(0, 3) : [])
       setNextRoundTarget(data.next_round_target ?? '')
       setCurriculumPlan(Array.isArray(data.curriculum_plan) ? data.curriculum_plan.slice(0, 7) : [])
@@ -2225,15 +2340,31 @@ function App() {
           return nextArchive
         })
       }
+      if (panelModeEnabled) {
+        setCurrentAnswer('')
+      }
       if (derivedComplete) {
         setCurrentQuestion('')
         setInterviewStatusMessage('Interview simulation done.')
         setInterviewStage('completed')
       } else {
         setInterviewStage('session')
-        setInterviewStatusMessage('Choose your next step: follow-up question or next main question.')
+        if (panelModeEnabled && shouldWaitForNextStep) {
+          const reactionLead = PANEL_INTERVIEWERS[activePanelistIndex % PANEL_INTERVIEWERS.length]
+          setPanelReactionText(
+            `${reactionLead.name}: ${data.feedback || 'Thanks — we will move to the next panel question.'}`
+          )
+          setIsPanelAutoAdvancing(true)
+          setInterviewStatusMessage(`${reactionLead.role} is responding and preparing the next question...`)
+          const autoChoice = data.follow_up_question ? 'follow_up' : 'next_question'
+          window.setTimeout(() => {
+            void handleAdvanceInterview(autoChoice, true)
+          }, 10000)
+        } else {
+          setInterviewStatusMessage('Choose your next step: follow-up question or next main question.')
+        }
       }
-      // Keep the submitted answer visible while review feedback is shown.
+      // Keep submitted answer visible in standard mode; panel mode clears immediately.
     } catch (error) {
       setInterviewError(error.message || 'Failed to submit answer.')
     } finally {
@@ -2241,8 +2372,8 @@ function App() {
     }
   }
 
-  const handleAdvanceInterview = async (choice) => {
-    if (!waitingForNextStep || !sessionId.trim()) {
+  const handleAdvanceInterview = async (choice, force = false) => {
+    if ((!waitingForNextStep && !force) || !sessionId.trim()) {
       return
     }
     setInterviewError('')
@@ -2263,6 +2394,9 @@ function App() {
       const data = await response.json()
       const nextQ = data.question || ''
       setCurrentQuestion(nextQ)
+      if (data.persona) {
+        setActivePanelistIndex(mapPanelPersonaToIndex(data.persona))
+      }
       if (nextQ) {
         setQuestionTrail((prev) => {
           const updated = [...prev, nextQ].slice(-40)
@@ -2275,7 +2409,18 @@ function App() {
       setLatestFollowUpQuestion('')
       setPendingNextQuestion('')
       setShowFollowUpPreview(false)
-      setShowNextQuestionPreview(false)
+      setSelectedFollowUpPreviewIndex(0)
+      setShowFollowUpExpectedAnswer(false)
+      setPanelReactionText('')
+      setIsPanelAutoAdvancing(false)
+      if (!data.persona) {
+        setActivePanelistIndex((prev) => (prev + 1) % PANEL_INTERVIEWERS.length)
+      }
+      setLastScore(null)
+      setLastFeedback('')
+      setLatestCritique('')
+      setLatestRewrite('')
+      setShowLatestRewrite(false)
       setInterviewStatusMessage(choice === 'follow_up' ? 'Follow-up selected.' : 'Moved to next main question.')
     } catch (error) {
       setInterviewError(error.message || 'Failed to advance interview.')
@@ -2754,9 +2899,40 @@ function App() {
                   </button>
                 </div>
               ) : null}
-              {displayedQuestion ? (
-                <div className="question-card">
-                  <h3>{isViewingLatestQuestion ? 'Current Question' : 'Previous Question (read-only view)'}</h3>
+              {isPanelSimulationActive && panelBubbleText ? (
+                <div className="question-card panel-sim interview-transition">
+                  <div className="panel-sim__grid">
+                    {PANEL_INTERVIEWERS.map((person, index) => {
+                      const isActiveSpeaker = index === activePanelistIndex
+                      return (
+                        <article
+                          key={person.id}
+                          className={isActiveSpeaker ? 'panel-sim__card panel-sim__card--active' : 'panel-sim__card'}
+                        >
+                          <div className="panel-sim__avatar" aria-hidden="true">
+                            {person.icon}
+                          </div>
+                          <p className="panel-sim__name">{person.name}</p>
+                          <p className="panel-sim__role">{person.role}</p>
+                        </article>
+                      )
+                    })}
+                  </div>
+                  <div className="panel-sim__bubble">
+                    <p className="panel-sim__bubble-label">
+                      {isPanelAutoAdvancing ? 'Panel reaction' : `Question ${activeQuestionNumber}`}
+                    </p>
+                    <p>{panelBubbleText}</p>
+                  </div>
+                </div>
+              ) : null}
+              {!isPanelSimulationActive && displayedQuestion ? (
+                <div className="question-card interview-transition">
+                  <h3>
+                    {isViewingLatestQuestion
+                      ? `Question ${activeQuestionNumber}`
+                      : `Question ${Math.max(1, questionTrailIndex + 1)} (review)`}
+                  </h3>
                   <p>{displayedQuestion}</p>
                 </div>
               ) : null}
@@ -2783,80 +2959,98 @@ function App() {
                 </form>
               ) : null}
 
-              {waitingForNextStep ? (
-                <div className="question-card next-step-card">
-                  <h3>Choose next step</h3>
+              {waitingForNextStep && !isPanelSimulationActive ? (
+                <div className="question-card next-step-card interview-transition">
+                  <h3>Would you like to see follow-up questions based on your answer?</h3>
                   <p className="next-step-card__subtitle">
-                    Pick one path. You can preview each question before choosing.
+                    You can preview follow-up variants, try one, or move straight to the next main question.
                   </p>
-                  <div className="next-step-grid">
-                    <article className="next-step-option">
-                      <h4>Follow-up path</h4>
+                  <div className="next-step-compact">
+                    <button
+                      type="button"
+                      className="button button--secondary"
+                      disabled={!latestFollowUpQuestion || isAdvancingInterview}
+                      onClick={() => void handleAdvanceInterview('follow_up')}
+                    >
+                      {isAdvancingInterview ? 'Loading...' : followUpPromptLabel}
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--secondary"
+                      disabled={!pendingNextQuestion || isAdvancingInterview}
+                      onClick={() => void handleAdvanceInterview('next_question')}
+                      aria-label="Continue to next main question"
+                    >
+                      {isAdvancingInterview ? '…' : '→'}
+                    </button>
+                  </div>
+                  <div className="next-step-preview-row">
+                    {latestFollowUpQuestion ? (
                       <button
                         type="button"
                         className="button button--ghost"
-                        disabled={!latestFollowUpQuestion}
                         onClick={() => setShowFollowUpPreview((prev) => !prev)}
                       >
-                        {showFollowUpPreview ? 'Hide preview' : 'Preview question'}
+                        {showFollowUpPreview ? 'Hide follow-up preview' : 'Preview follow-up'}
                       </button>
-                      {latestFollowUpQuestion && showFollowUpPreview ? (
-                        <p className="message message--info">
-                          {latestFollowUpQuestion}
-                        </p>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="button button--primary"
-                        disabled={!latestFollowUpQuestion || isAdvancingInterview}
-                        onClick={() => void handleAdvanceInterview('follow_up')}
-                      >
-                        {isAdvancingInterview ? 'Loading...' : 'Answer follow-up'}
-                      </button>
-                    </article>
-
-                    <article className="next-step-option">
-                      <h4>Next main question</h4>
-                      <button
-                        type="button"
-                        className="button button--ghost"
-                        disabled={!pendingNextQuestion}
-                        onClick={() => setShowNextQuestionPreview((prev) => !prev)}
-                      >
-                        {showNextQuestionPreview ? 'Hide preview' : 'Preview question'}
-                      </button>
-                      {pendingNextQuestion && showNextQuestionPreview ? (
-                        <p className="message message--info">
-                          {pendingNextQuestion}
-                        </p>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="button button--secondary"
-                        disabled={!pendingNextQuestion || isAdvancingInterview}
-                        onClick={() => void handleAdvanceInterview('next_question')}
-                      >
-                        Go to next question
-                      </button>
-                    </article>
+                    ) : null}
                   </div>
+                  {showFollowUpPreview && followUpPreviewOptions.length > 0 ? (
+                    <div className="next-step-followup-variants">
+                      <div className="next-step-preview-row">
+                        {followUpPreviewOptions.map((option, index) => (
+                          <button
+                            key={option.label}
+                            type="button"
+                            className="button button--ghost"
+                            onClick={() => setSelectedFollowUpPreviewIndex(index)}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="button button--ghost"
+                          onClick={() => setShowFollowUpExpectedAnswer((prev) => !prev)}
+                        >
+                          {showFollowUpExpectedAnswer ? 'Hide expected answer style' : 'Preview expected answer style'}
+                        </button>
+                      </div>
+                      {selectedFollowUpPreview ? (
+                        <p className="message message--info">{selectedFollowUpPreview.text}</p>
+                      ) : null}
+                      {showFollowUpExpectedAnswer ? (
+                        <p className="message message--success">
+                          Suggested answer style: 1) direct context, 2) specific action, 3) measurable impact, 4) short
+                          takeaway.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
-              {activeTab === 'interview' && lastScore !== null ? (
-                <p className="message message--info">Score: {lastScore} / 10</p>
-              ) : null}
-              {lastFeedback ? <p className="message message--success">{lastFeedback}</p> : null}
-              {latestCritique ? (
-                <p className="message message--info">
-                  <strong>Critique:</strong> {latestCritique}
-                </p>
-              ) : null}
-              {latestRewrite ? (
-                <div className="message message--success">
-                  <p>
-                    <strong>Suggested rewrite:</strong> {latestRewrite}
+              {!isPanelSimulationActive ? <div className="interview-review-stack">
+                {activeTab === 'interview' && lastScore !== null ? (
+                  <p className="message message--info">Score: {lastScore} / 10</p>
+                ) : null}
+                {lastFeedback ? <p className="message message--success">{lastFeedback}</p> : null}
+                {latestCritique && !isPanelSimulationActive ? (
+                  <p className="message message--info">
+                    <strong>Critique:</strong> {latestCritique}
                   </p>
+                ) : null}
+              </div> : null}
+              {latestRewrite ? (
+                <div className="message message--success interview-transition">
+                  <button
+                    type="button"
+                    className="button button--ghost"
+                    onClick={() => setShowLatestRewrite((prev) => !prev)}
+                  >
+                    {showLatestRewrite ? 'Hide suggested answer' : 'Show suggested answer'}
+                  </button>
+                  {showLatestRewrite ? <p><strong>Suggested rewrite:</strong> {latestRewrite}</p> : null}
                   <div className="rewrite-audio-row">
                     <div className="rewrite-audio-controls">
                       <button
@@ -3500,8 +3694,8 @@ function App() {
           </form>
 
           {!shouldPromptToResumeInterview && currentQuestion ? (
-            <div className="question-card">
-              <h3>Current Question</h3>
+            <div className="question-card interview-transition">
+              <h3>Question {activeQuestionNumber}</h3>
               <p>{currentQuestion}</p>
               <button type="button" className="button button--ghost" onClick={handlePauseInterviewToDashboard}>
                 Pause and return to dashboard
@@ -3541,26 +3735,32 @@ function App() {
                 </div>
               ) : null}
 
-              {lastScore !== null ? (
-                <p className="message message--info">Score: {lastScore} / 10</p>
-              ) : null}
-              {lastFeedback ? <p className="message message--success">{lastFeedback}</p> : null}
+              {!isPanelSimulationActive ? <div className="interview-review-stack">
+                {lastScore !== null ? (
+                  <p className="message message--info">Score: {lastScore} / 10</p>
+                ) : null}
+                {lastFeedback ? <p className="message message--success">{lastFeedback}</p> : null}
+              </div> : null}
               {latestFollowUpQuestion ? (
                 <p className="message message--info">
                   <strong>Real-time follow-up:</strong> {latestFollowUpQuestion}
                 </p>
               ) : null}
-              {latestCritique ? (
+              {latestCritique && !isPanelSimulationActive ? (
                 <p className="message message--info">
                   <strong>Critique:</strong> {latestCritique}
                 </p>
               ) : null}
               {latestRewrite ? (
-                <div className="message message--success">
-                  <p>
-                    <strong>Suggested rewrite:</strong>
-                  </p>
-                  <p>{latestRewrite}</p>
+                <div className="message message--success interview-transition">
+                  <button
+                    type="button"
+                    className="button button--ghost"
+                    onClick={() => setShowLatestRewrite((prev) => !prev)}
+                  >
+                    {showLatestRewrite ? 'Hide suggested answer' : 'Show suggested answer'}
+                  </button>
+                  {showLatestRewrite ? <p>{latestRewrite}</p> : null}
                   <div className="rewrite-audio-row">
                     <div className="rewrite-audio-controls">
                       <button
@@ -3714,15 +3914,37 @@ function App() {
                 <select
                   className="input-elevated"
                   value={outreachMessageType}
-                  onChange={(event) => setOutreachMessageType(event.target.value)}
+                  onChange={(event) => {
+                    const next = event.target.value
+                    setOutreachMessageType(next)
+                    if (next !== 'other') {
+                      setOutreachOtherPurpose('')
+                    }
+                  }}
                 >
+                  <option value="" disabled>
+                    Select a purpose…
+                  </option>
                   <option value="follow_up">Application follow-up</option>
                   <option value="thank_you">Thank-you after interview</option>
                   <option value="cold">Cold outreach / interest</option>
                   <option value="connection">Connection / intro request</option>
                   <option value="schedule">Request a brief call</option>
+                  <option value="other">Other…</option>
                 </select>
               </label>
+              {outreachMessageType === 'other' ? (
+                <label>
+                  Purpose details
+                  <input
+                    className="input-elevated"
+                    type="text"
+                    value={outreachOtherPurpose}
+                    onChange={(event) => setOutreachOtherPurpose(event.target.value)}
+                    placeholder="e.g. Ask about team fit, confirm recruiter contact, request portfolio review"
+                  />
+                </label>
+              ) : null}
               <label>
                 Channel
                 <select
@@ -3730,6 +3952,9 @@ function App() {
                   value={outreachChannel}
                   onChange={(event) => setOutreachChannel(event.target.value)}
                 >
+                  <option value="" disabled>
+                    Select a channel…
+                  </option>
                   <option value="email">Email</option>
                   <option value="linkedin">LinkedIn (shorter)</option>
                 </select>
@@ -3741,6 +3966,9 @@ function App() {
                   value={outreachTone}
                   onChange={(event) => setOutreachTone(event.target.value)}
                 >
+                  <option value="" disabled>
+                    Select a tone…
+                  </option>
                   <option value="professional">Professional</option>
                   <option value="warm">Warm</option>
                   <option value="concise">Concise</option>

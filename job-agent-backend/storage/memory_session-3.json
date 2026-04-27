@@ -1,0 +1,86 @@
+{
+  "mode": "behavioral",
+  "job_description": "Job Description\n\nQuaker Houghton invites you to apply for an internship located in Conshohocken, PA. This internship is designed to provide you with a positive work/training experience and challenging objectives.\n\nAs a Software Developer Intern for QH Fluid Intelligence and R&D Platforms, you’ll be part of our diverse global team making a significant impact on our organization. You will use your analytical thinking skills combined with your experience in applying design patterns and best practices, structured and disciplined development processes and engineering principles to developing robust, scalable and maintainable solutions that are user friendly and support business priorities.\n\nOur FI products are installed and used by factories that uses metals, forms and deforms metals by forging, forming, cutting, fabrication including automobiles to beverage cans that you use every day. You will analyze, design, program, debug, modify, test and implement software used in local, networked, cloud-based IoT Devices and connected applications for Fluid Intelligence.\n\nHow you will do it:\n\n This will be a full-time Summer 2026 internship running from May to August\n Hybrid position – at least 3 days a week in Conshohocken PA office\n Tasked with a specific project In Fluid Intelligence or R&D Software Applications\n Assist with Software Development using Python, C/C++, JavaScript, IoT connectivity, Data analysis and exploration etc. \n Participate in the Future Leaders Internship Programming events that include but are not limited to professional development sessions, 4-week Innovation Challenge and special events\n\nWhat we look for\n\nRequired Qualifications:\n\n Currently enrolled as a full-time student at an accredited U.S. college or university\n Pursuing a degree in Computer Science, Software Engineering/Design\n U.S. citizen or legal right to work in the U.S. \n\nPreferred Qualifications:\n\n Demonstrates an ability to learn quickly and independently\n Strong communication skills (verbal and written) preferred\n Demonstrated problem solving skills required",
+  "resume": "Berkeley, CA | (555) 123-4567 |  youremail@berkeley.edu  | Linkedin | website, and/or portfolio URL (optional)\n\nEducation\nUniversity of California, Berkeley\t                                                                                                                                                                      May 2026         \nBachelor of Arts in Data Science\t                                                                                                                                               GPA: ___/4.0 (optional)\n\nRelevant Coursework: Data Structures & Algorithms, Modern Statistical Prediction & Machine Learning, Principles & Techniques of Data Science, Data, Inference, & Decisions, and Human Contexts & Ethics of Data\n\n\nSkills\nLanguages: SQL, Python, R, Java\nDatabases: MySQL, SQLite\nMachine Learning: Scikit-learn, SAS\nTools: Pandas, Matplotlib, Tableau, Excel, BeautifulSoup\n\nHighlighted Experience and Projects\nData Analyst Intern, ABC Company, San Francisco, CA\t\t\t\t\t    \t      \t   Summer 2025      \nAnalyzed user engagement data using SQL and Python (Pandas, Matplotlib) to identify trends in app usage, providing insights that supported a 15% increase in user acquisition for high-value user segments\nDeveloped and implemented data cleaning procedures (Python) for a customer satisfaction survey dataset, leading to a 10% reduction in data processing time for future surveys\nCollaborated with software engineers to understand data storage structures and API functionalities, ensuring accurate data retrieval for analysis\n\n\nDatathon Project: Predicting Customer Churn for XYZ Company                                                                           \t               Spring 2025\nLed a team of 4 in the exploration of customer data, uncovering key trends and patterns related to churn\nGuided team in selecting machine learning algorithms using Scikit-learn for churn prediction; oversaw model training, evaluation, and hyperparameter tuning to optimize performance\nPrepared and delivered a final presentation to datathon judges, highlighting key findings and model performance (78% accuracy on unseen test data)\n\n\nProject: Fantasy Football Modeling, Course: Data and Decisions                                                                       \t                             Fall 2024  \nAggregated and prepped 5 years of NFL fantasy football projection data from 6 independent sources into a MySQL database\nBuilt a random forest model in SAS that improved projection accuracy by combining the disparate sources into one projection that outperformed the mean absolute error of the next best projection by 18%\n\n\nProject: Production Control, Course:  System and Analysis Design\t                                                                                          Spring 2024\nLed a team of five students in designing, coding, and implementing a SQL database\nEntered and updated information using the web scraping tool BeautifulSoup\nCompleted analysis and designed documentation with data flow diagrams, structural charts, process specifications, a data dictionary, and a user manual\n\n\nLeadership and Extracurricular Activities\nData Structures Undergraduate Student Instructor, UC Berkeley EECS Dept\t                                       Sept. 2024 - May 2025\nSupported biweekly sections of 100+ students to help reinforce core data structures concepts (e.g. asymptotics, linked lists, trees, searching/sorting algorithms, etc.)\nShaped course curriculum by developing relevant enrichment problems to help students master concepts\n\nCS Educator / Events Committee Member, Berkeley ANova\t                                                                             Sept. 2023 - May 2024\nImproved computer science education in under-resourced communities across the Bay Area\nTaught a weekly project-based after-school program at Bay Area middle schools",
+  "panel_mode": false,
+  "pressure_round": false,
+  "company_context": "",
+  "role_context": "SWE",
+  "interview_date": "2026-04-30",
+  "panel_personas": [],
+  "panel_turn_index": 2,
+  "weak_topic_memory": [
+    "data integration",
+    "predictive modeling",
+    "scalability",
+    "maintainability",
+    "data integration",
+    "data preprocessing",
+    "handling data inconsistencies"
+  ],
+  "target_question_count": 2,
+  "answered_count": 2,
+  "pending_next_step": {},
+  "interview_complete": true,
+  "history": [
+    {
+      "question": "Can you describe a scenario where you had to analyze and design a software solution for a real-world problem, such as predicting customer churn or optimizing production control, and how you applied design patterns and best practices to develop a robust and maintainable solution using languages like Python or Java?",
+      "answer": "",
+      "score": null,
+      "persona": "recruiter",
+      "focus_area": "Software Development, Design Patterns, and Problem-Solving"
+    },
+    {
+      "question": "Can you walk me through a project where you had to collect and analyze data from various sources, and then use a programming language like Python to develop a data-driven solution, such as predicting user behavior or optimizing system performance, and how you ensured the solution was scalable, maintainable, and user-friendly?",
+      "answer": "",
+      "score": null,
+      "persona": "recruiter",
+      "focus_area": "Data Analysis, Software Development, and Problem-Solving"
+    },
+    {
+      "question": "How would you use Python to analyze sensor data from IoT devices in a manufacturing setting to detect anomalies in metal fabrication processes, and what libraries or frameworks would you use to implement this solution?",
+      "answer": "",
+      "score": null,
+      "persona": "interviewer",
+      "focus_area": "Data Analysis, IoT, and Anomaly Detection"
+    },
+    {
+      "question": "How would you use JavaScript to develop a real-time data visualization dashboard for monitoring the performance of IoT devices in a metal fabrication factory, and what libraries or frameworks would you use to implement this solution?",
+      "answer": "",
+      "score": null,
+      "persona": "interviewer",
+      "focus_area": "Data Visualization, IoT, and Real-time Monitoring"
+    },
+    {
+      "question": "Can you describe a scenario where you had to integrate data from multiple sources, such as IoT devices and databases, to develop a predictive model for optimizing metal fabrication processes, and how you would use languages like Python or Java to implement this solution, ensuring it is scalable, maintainable, and provides real-time insights?",
+      "answer": "yes i collaborated with my team on it and we did a research security training course and then got the data",
+      "score": 2,
+      "persona": "interviewer",
+      "focus_area": "Data Integration, Predictive Modeling, and Software Development",
+      "feedback": "The answer lacks clarity, structure, and technical depth. It does not provide a specific scenario, and the response is too vague to assess the candidate's skills in integrating data from multiple sources or developing predictive models.",
+      "weak_topics": [
+        "data integration",
+        "predictive modeling",
+        "scalability",
+        "maintainability"
+      ],
+      "critique": "The answer fails to demonstrate the candidate's ability to integrate data from multiple sources, develop predictive models, or implement solutions using programming languages like Python or Java. The response lacks specific details and does not provide measurable impact.",
+      "rewrite": "In a recent project, I worked with a cross-functional team to integrate data from IoT devices and databases to develop a predictive model for optimizing metal fabrication processes. We utilized Python to collect and process data from various sources, including sensor readings from IoT devices and production data from databases. Using the STAR method, I can break down the experience as follows: Situation - our company wanted to optimize metal fabrication processes; Task - I was tasked with integrating data from multiple sources; Action - I used Python's pandas library to handle data manipulation and scikit-learn to develop a predictive model; Result - our model achieved a 25% reduction in production time and a 15% increase in product quality. To ensure scalability and maintainability, we implemented a cloud-based solution using Java, which provided real-time insights and automated reporting."
+    },
+    {
+      "question": "Can you describe a situation where you had to integrate data from multiple sources, such as IoT devices, databases, and APIs, to develop a software solution, and how you handled data inconsistencies, missing values, or formatting issues using programming languages like Python or Java?",
+      "answer": "i did data cleaning, data preprocessing",
+      "score": 2,
+      "persona": "interviewer",
+      "focus_area": "Data Integration, Software Development, and Problem-Solving",
+      "feedback": "The answer lacks clarity, structure, and depth. It does not provide specific details about the situation, the data sources, or the programming languages used. The response does not demonstrate technical accuracy or measurable impact.",
+      "weak_topics": [
+        "data integration",
+        "data preprocessing",
+        "handling data inconsistencies"
+      ],
+      "critique": "The answer is too vague and does not follow the STAR method. It fails to provide a clear situation, task, action, or result.",
+      "rewrite": "In a previous project, I was tasked with developing a software solution that integrated data from multiple IoT devices, databases, and APIs. To handle data inconsistencies, missing values, and formatting issues, I used Python's pandas library to perform data cleaning and preprocessing. Specifically, I used the `dropna()` function to remove missing values, the `apply()` function to handle formatting issues, and the `merge()` function to integrate data from multiple sources. As a result, I was able to reduce data errors by 30% and improve the overall quality of the software solution."
+    }
+  ]
+}

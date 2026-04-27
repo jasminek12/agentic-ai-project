@@ -1,0 +1,33 @@
+{
+  "mode": "",
+  "job_description": "",
+  "resume": "",
+  "panel_mode": false,
+  "pressure_round": false,
+  "company_context": "",
+  "role_context": "",
+  "interview_date": "",
+  "panel_personas": [],
+  "panel_turn_index": 0,
+  "weak_topic_memory": [],
+  "target_question_count": 6,
+  "answered_count": 0,
+  "pending_next_step": {},
+  "interview_complete": false,
+  "history": [
+    {
+      "question": "Can you describe a scenario where you had to analyze and design a solution for a real-world problem using Python, and how you ensured the solution was scalable, maintainable, and user-friendly, considering the requirements of a factory that uses metals and IoT devices?",
+      "answer": "",
+      "score": null,
+      "persona": "recruiter",
+      "focus_area": "Software Development, Problem Solving, and IoT Connectivity"
+    },
+    {
+      "question": "Suppose you are tasked with developing a software application for a factory that uses metals and IoT devices, where the application needs to collect and analyze data from various sensors and devices to predict equipment failures and optimize production processes. How would you design and implement a data analysis pipeline using Python, considering the requirements of data ingestion, processing, and visualization, as well as ensuring the pipeline is scalable, maintainable, and integrates with existing IoT infrastructure?",
+      "answer": "",
+      "score": null,
+      "persona": "recruiter",
+      "focus_area": "Software Development, Data Analysis, and IoT Connectivity"
+    }
+  ]
+}
