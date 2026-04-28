@@ -1,0 +1,79 @@
+{
+  "mode": "behavioral",
+  "job_description": "Job Description\n\nQuaker Houghton invites you to apply for an internship located in Conshohocken, PA. This internship is designed to provide you with a positive work/training experience and challenging objectives.\n\nAs a Software Developer Intern for QH Fluid Intelligence and R&D Platforms, you’ll be part of our diverse global team making a significant impact on our organization. You will use your analytical thinking skills combined with your experience in applying design patterns and best practices, structured and disciplined development processes and engineering principles to developing robust, scalable and maintainable solutions that are user friendly and support business priorities.\n\nOur FI products are installed and used by factories that uses metals, forms and deforms metals by forging, forming, cutting, fabrication including automobiles to beverage cans that you use every day. You will analyze, design, program, debug, modify, test and implement software used in local, networked, cloud-based IoT Devices and connected applications for Fluid Intelligence.\n\nHow you will do it:\n\n This will be a full-time Summer 2026 internship running from May to August\n Hybrid position – at least 3 days a week in Conshohocken PA office\n Tasked with a specific project In Fluid Intelligence or R&D Software Applications\n Assist with Software Development using Python, C/C++, JavaScript, IoT connectivity, Data analysis and exploration etc. \n Participate in the Future Leaders Internship Programming events that include but are not limited to professional development sessions, 4-week Innovation Challenge and special events\n\nWhat we look for\n\nRequired Qualifications:\n\n Currently enrolled as a full-time student at an accredited U.S. college or university\n Pursuing a degree in Computer Science, Software Engineering/Design\n U.S. citizen or legal right to work in the U.S. \n\nPreferred Qualifications:\n\n Demonstrates an ability to learn quickly and independently\n Strong communication skills (verbal and written) preferred\n Demonstrated problem solving skills required",
+  "resume": "Berkeley, CA | (555) 123-4567 |  youremail@berkeley.edu  | Linkedin | website, and/or portfolio URL (optional)\n\nEducation\nUniversity of California, Berkeley\t                                                                                                                                                                      May 2026         \nBachelor of Arts in Data Science\t                                                                                                                                               GPA: 3.9/4.0 (optional)\n\nRelevant Coursework: Data Structures & Algorithms, Modern Statistical Prediction & Machine Learning, Principles & Techniques of Data Science, Data, Inference, & Decisions, and Human Contexts & Ethics of Data\n\n\nSkills\nLanguages: SQL, Python, R, Java\nDatabases: MySQL, SQLite\nMachine Learning: Scikit-learn, SAS\nTools: Pandas, Matplotlib, Tableau, Excel, BeautifulSoup\n\nHighlighted Experience and Projects\nData Analyst Intern, ABC Company, San Francisco, CA\t\t\t\t\t    \t      \t   Summer 2025      \nAnalyzed user engagement data using SQL and Python (Pandas, Matplotlib) to identify trends in app usage, providing insights that supported a 15% increase in user acquisition for high-value user segments\nDeveloped and implemented data cleaning procedures (Python) for a customer satisfaction survey dataset, leading to a 10% reduction in data processing time for future surveys\nCollaborated with software engineers to understand data storage structures and API functionalities, ensuring accurate data retrieval for analysis\n\n\nDatathon Project: Predicting Customer Churn for XYZ Company                                                                           \t               Spring 2025\nLed a team of 4 in the exploration of customer data, uncovering key trends and patterns related to churn\nGuided team in selecting machine learning algorithms using Scikit-learn for churn prediction; oversaw model training, evaluation, and hyperparameter tuning to optimize performance\nPrepared and delivered a final presentation to datathon judges, highlighting key findings and model performance (78% accuracy on unseen test data)\n\n\nProject: Fantasy Football Modeling, Course: Data and Decisions                                                                       \t                             Fall 2024  \nAggregated and prepped 5 years of NFL fantasy football projection data from 6 independent sources into a MySQL database\nBuilt a random forest model in SAS that improved projection accuracy by combining the disparate sources into one projection that outperformed the mean absolute error of the next best projection by 18%\n\n\nProject: Production Control, Course:  System and Analysis Design\t                                                                                          Spring 2024\nLed a team of five students in designing, coding, and implementing a SQL database\nEntered and updated information using the web scraping tool BeautifulSoup\nCompleted analysis and designed documentation with data flow diagrams, structural charts, process specifications, a data dictionary, and a user manual\n\n\nLeadership and Extracurricular Activities\nData Structures Undergraduate Student Instructor, UC Berkeley EECS Dept\t                                       Sept. 2024 - May 2025\nSupported biweekly sections of 100+ students to help reinforce core data structures concepts (e.g. asymptotics, linked lists, trees, searching/sorting algorithms, etc.)\nShaped course curriculum by developing relevant enrichment problems to help students master concepts\n\nCS Educator / Events Committee Member, Berkeley ANova\t                                                                             Sept. 2023 - May 2024\nImproved computer science education in under-resourced communities across the Bay Area\nTaught a weekly project-based after-school program at Bay Area middle schools",
+  "panel_mode": false,
+  "pressure_round": false,
+  "company_context": "",
+  "role_context": "",
+  "interview_date": "2026-04-30",
+  "panel_personas": [],
+  "panel_turn_index": 3,
+  "weak_topic_memory": [
+    "problem analysis",
+    "software design",
+    "Python programming",
+    "problem-solving",
+    "technical analysis",
+    "communication skills",
+    "problem-solving",
+    "technical skills",
+    "communication"
+  ],
+  "target_question_count": 8,
+  "answered_count": 3,
+  "pending_next_step": {
+    "follow_up_question": "Can you think of a specific project or task where you had to learn something new, even if it wasn't a programming language, and walk me through how you approached it?",
+    "next_question": "Describe a time you had to influence someone without direct authority.",
+    "next_persona": "interviewer",
+    "next_focus_area": "influence and stakeholder alignment"
+  },
+  "interview_complete": false,
+  "history": [
+    {
+      "question": "Can you describe a scenario where you had to analyze and design a software solution for a real-world problem, such as predicting customer churn or optimizing production control, and how you applied design patterns and best practices to develop a robust and maintainable solution using Python?",
+      "answer": "no idea",
+      "score": 0,
+      "persona": "interviewer",
+      "focus_area": "Software Development, Design Patterns, and Problem-Solving",
+      "feedback": "The answer lacks any relevant information, technical details, or a clear structure, making it impossible to evaluate the candidate's skills or experience.",
+      "weak_topics": [
+        "problem analysis",
+        "software design",
+        "Python programming"
+      ],
+      "critique": "The answer does not demonstrate any understanding of the question, and the candidate fails to provide a specific example or scenario, making it a non-responsive answer.",
+      "rewrite": "In my previous role, I worked on a project to predict customer churn for a telecom company. Using Python, I applied the STAR method to analyze the problem: Situation - identifying the key factors contributing to churn, Task - designing a predictive model, Action - implementing a solution using scikit-learn and pandas, and Result - achieving a 25% reduction in churn rate. I applied the Singleton design pattern to ensure thread safety and followed best practices such as separation of concerns and continuous integration to develop a robust and maintainable solution."
+    },
+    {
+      "question": "Can you walk me through your process for breaking down a complex problem into manageable components, and how you would apply this process to a scenario where you need to analyze and optimize the performance of a software application, such as one used in Fluid Intelligence or R&D Platforms, using tools like Python or JavaScript?",
+      "answer": "no idea",
+      "score": 0,
+      "persona": "interviewer",
+      "focus_area": "Problem Analysis and Software Development",
+      "feedback": "The answer lacks any meaningful content, structure, or technical accuracy. It does not demonstrate an understanding of the problem or the ability to break down complex issues into manageable components.",
+      "weak_topics": [
+        "problem-solving",
+        "technical analysis",
+        "communication skills"
+      ],
+      "critique": "The answer is extremely vague and does not provide any insight into the candidate's thought process or technical abilities. It fails to meet the basic expectations of the question.",
+      "rewrite": "To break down a complex problem, I would use the STAR method: Situation, Task, Action, Result. First, I would define the situation by identifying the key performance indicators of the software application. Then, I would outline the task by determining the specific areas that require optimization. Next, I would take action by utilizing tools like Python or JavaScript to collect and analyze data, and finally, I would evaluate the results to identify areas for improvement. For example, if I were analyzing a Fluid Intelligence application, I might use Python to collect data on user engagement and then use data visualization libraries to identify trends and optimize the user experience."
+    },
+    {
+      "question": "Can you describe a situation where you had to learn and apply a new programming language or technology, such as Python or JavaScript, to solve a real-world problem or complete a project, and how you overcame any challenges you encountered during the process?",
+      "answer": "im not sure",
+      "score": 0,
+      "persona": "interviewer",
+      "focus_area": "Problem Analysis, Technical Learning, and Adaptability",
+      "feedback": "The answer lacks clarity, structure, and depth. It does not provide any specific example or details about learning and applying a new programming language or technology.",
+      "weak_topics": [
+        "problem-solving",
+        "technical skills",
+        "communication"
+      ],
+      "critique": "The answer is too vague and does not demonstrate any relevant skills or experience. It is essential to provide a specific example and walk the interviewer through the situation, task, action, and result (STAR) to showcase problem-solving skills and technical abilities.",
+      "rewrite": "In my previous role, I was tasked with developing a data analytics dashboard using Python, a language I had no prior experience with. I started by taking online courses and tutorials to learn the basics of Python, such as data structures, file input/output, and data visualization libraries like Matplotlib and Seaborn. As I progressed, I applied my new skills to the project by writing scripts to collect and process data, and then used libraries like Pandas and NumPy to analyze and visualize the data. I overcame challenges by breaking down the problem into smaller tasks, researching solutions online, and seeking guidance from colleagues. The result was a fully functional dashboard that provided valuable insights to our stakeholders, and I was able to deliver it within the given timeframe."
+    }
+  ]
+}

@@ -5,6 +5,9 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.agents.interview_agent import (
     build_curriculum_plan,
     build_debrief_actions,
+    compute_answer_metrics,
+    compute_resume_job_match_metrics,
+    compute_session_system_metrics,
     estimate_question_count,
     evaluate_answer,
     generate_follow_up,
@@ -187,6 +190,12 @@ def start_interview(payload: StartInterviewRequest):
         memory["answered_count"] = 0
         memory["pending_next_step"] = {}
         memory["interview_complete"] = False
+        memory["system_metrics"] = {
+            "latency_ms_avg": 0.0,
+            "consistency_score": 0.0,
+            "drift_score": 0.0,
+        }
+        memory["resume_job_match"] = compute_resume_job_match_metrics(payload.resume, payload.job_description)
 
         try:
             first_question = generate_question(
@@ -210,6 +219,7 @@ def start_interview(payload: StartInterviewRequest):
                 "score": None,
                 "persona": first_question.get("persona", ""),
                 "focus_area": first_question.get("focus_area", ""),
+                "asked_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             }
         )
         memory["panel_turn_index"] = int(memory.get("panel_turn_index", 0)) + 1
@@ -280,13 +290,33 @@ def submit_answer(payload: SubmitAnswerRequest):
                 detail={"error": "Choose follow-up or next question before submitting another answer."},
             )
 
+        eval_started_at = datetime.now(timezone.utc)
         evaluation = evaluate_answer(current_item["question"], payload.answer, memory.get("mode", "behavioral"))
+        eval_latency_ms = round((datetime.now(timezone.utc) - eval_started_at).total_seconds() * 1000.0, 2)
+        asked_at_raw = str(current_item.get("asked_at", ""))
+        response_time_seconds = None
+        if asked_at_raw:
+            try:
+                asked_at = datetime.fromisoformat(asked_at_raw.replace("Z", "+00:00"))
+                response_time_seconds = max(0.0, (datetime.now(timezone.utc) - asked_at).total_seconds())
+            except ValueError:
+                response_time_seconds = None
+        metric_bundle = compute_answer_metrics(
+            current_item["question"],
+            payload.answer,
+            evaluation["score"],
+            memory.get("mode", "behavioral"),
+            evaluation["weak_topics"],
+            response_time_seconds=response_time_seconds,
+        )
         current_item["answer"] = payload.answer
         current_item["score"] = evaluation["score"]
         current_item["feedback"] = evaluation["feedback"]
         current_item["weak_topics"] = evaluation["weak_topics"]
         current_item["critique"] = evaluation["critique"]
         current_item["rewrite"] = evaluation["rewrite"]
+        current_item["evaluation_latency_ms"] = eval_latency_ms
+        current_item.update(metric_bundle)
 
         weak_topic_memory = list(memory.get("weak_topic_memory", []))
         weak_topic_memory.extend([str(t).strip() for t in evaluation["weak_topics"] if str(t).strip()])
@@ -311,18 +341,42 @@ def submit_answer(payload: SubmitAnswerRequest):
             "curriculum_plan": [],
             "weak_topic_memory": weak_topic_memory[-8:],
             "final_evaluation": "",
+            "relevance_score": metric_bundle["relevance_score"],
+            "correctness_score": metric_bundle["correctness_score"],
+            "clarity_score": metric_bundle["clarity_score"],
+            "depth_score": metric_bundle["depth_score"],
+            "confidence_score": metric_bundle["confidence_score"],
+            "technical_accuracy_pct": metric_bundle["technical_accuracy_pct"],
+            "star_format_usage_pct": metric_bundle["star_format_usage_pct"],
+            "answer_length_words": metric_bundle["answer_length_words"],
+            "response_time_seconds": metric_bundle["response_time_seconds"],
+            "evaluation_latency_ms": eval_latency_ms,
+            "skill_overlap_pct": float(memory.get("resume_job_match", {}).get("skill_overlap_pct", 0.0)),
+            "keyword_match_score": float(memory.get("resume_job_match", {}).get("keyword_match_score", 0.0)),
+            "experience_alignment_score": float(memory.get("resume_job_match", {}).get("experience_alignment_score", 0.0)),
+            "ats_style_score": float(memory.get("resume_job_match", {}).get("ats_style_score", 0.0)),
+            "consistency_score": float(memory.get("system_metrics", {}).get("consistency_score", 0.0)),
+            "drift_score": float(memory.get("system_metrics", {}).get("drift_score", 0.0)),
         }
 
         if interview_complete:
             memory["interview_complete"] = True
             debrief = build_debrief_actions(evaluation["score"], weak_topic_memory)
             curriculum_plan = build_curriculum_plan(weak_topic_memory, memory.get("interview_date", ""))
+            final_evaluation = summarize_final_evaluation(history, memory.get("mode", "behavioral"))
+            completed_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
             response_payload["debrief_actions"] = debrief["actions"]
             response_payload["next_round_target"] = debrief["target"]
             response_payload["curriculum_plan"] = curriculum_plan
-            response_payload["final_evaluation"] = summarize_final_evaluation(
-                history, memory.get("mode", "behavioral")
-            )
+            response_payload["final_evaluation"] = final_evaluation
+            memory["system_metrics"] = compute_session_system_metrics(history)
+            memory["final_evaluation"] = final_evaluation
+            memory["debrief_actions"] = debrief["actions"]
+            memory["next_round_target"] = debrief["target"]
+            memory["curriculum_plan"] = curriculum_plan
+            memory["completed_at"] = completed_at
+            response_payload["consistency_score"] = float(memory["system_metrics"].get("consistency_score", 0.0))
+            response_payload["drift_score"] = float(memory["system_metrics"].get("drift_score", 0.0))
         else:
             try:
                 follow_up_question = generate_follow_up(
@@ -411,6 +465,7 @@ def advance_interview(payload: AdvanceInterviewRequest):
                 "score": None,
                 "persona": pending.get("next_persona", ""),
                 "focus_area": pending.get("next_focus_area", ""),
+                "asked_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             }
         )
         memory["history"] = history

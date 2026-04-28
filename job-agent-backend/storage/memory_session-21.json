@@ -1,0 +1,166 @@
+{
+  "mode": "behavioral",
+  "job_description": "Job Description\n\nQuaker Houghton invites you to apply for an internship located in Conshohocken, PA. This internship is designed to provide you with a positive work/training experience and challenging objectives.\n\nAs a Software Developer Intern for QH Fluid Intelligence and R&D Platforms, you’ll be part of our diverse global team making a significant impact on our organization. You will use your analytical thinking skills combined with your experience in applying design patterns and best practices, structured and disciplined development processes and engineering principles to developing robust, scalable and maintainable solutions that are user friendly and support business priorities.\n\nOur FI products are installed and used by factories that uses metals, forms and deforms metals by forging, forming, cutting, fabrication including automobiles to beverage cans that you use every day. You will analyze, design, program, debug, modify, test and implement software used in local, networked, cloud-based IoT Devices and connected applications for Fluid Intelligence.\n\nHow you will do it:\n\n This will be a full-time Summer 2026 internship running from May to August\n Hybrid position – at least 3 days a week in Conshohocken PA office\n Tasked with a specific project In Fluid Intelligence or R&D Software Applications\n Assist with Software Development using Python, C/C++, JavaScript, IoT connectivity, Data analysis and exploration etc. \n Participate in the Future Leaders Internship Programming events that include but are not limited to professional development sessions, 4-week Innovation Challenge and special events\n\nWhat we look for\n\nRequired Qualifications:\n\n Currently enrolled as a full-time student at an accredited U.S. college or university\n Pursuing a degree in Computer Science, Software Engineering/Design\n U.S. citizen or legal right to work in the U.S. \n\nPreferred Qualifications:\n\n Demonstrates an ability to learn quickly and independently\n Strong communication skills (verbal and written) preferred\n Demonstrated problem solving skills required",
+  "resume": "Berkeley, CA | (555) 123-4567 |  youremail@berkeley.edu  | Linkedin | website, and/or portfolio URL (optional)\n\nEducation\nUniversity of California, Berkeley\t                                                                                                                                                                      May 2026         \nBachelor of Arts in Data Science\t                                                                                                                                               GPA: 3.9/4.0 (optional)\n\nRelevant Coursework: Data Structures & Algorithms, Modern Statistical Prediction & Machine Learning, Principles & Techniques of Data Science, Data, Inference, & Decisions, and Human Contexts & Ethics of Data\n\n\nSkills\nLanguages: SQL, Python, R, Java\nDatabases: MySQL, SQLite\nMachine Learning: Scikit-learn, SAS\nTools: Pandas, Matplotlib, Tableau, Excel, BeautifulSoup\n\nHighlighted Experience and Projects\nData Analyst Intern, ABC Company, San Francisco, CA\t\t\t\t\t    \t      \t   Summer 2025      \nAnalyzed user engagement data using SQL and Python (Pandas, Matplotlib) to identify trends in app usage, providing insights that supported a 15% increase in user acquisition for high-value user segments\nDeveloped and implemented data cleaning procedures (Python) for a customer satisfaction survey dataset, leading to a 10% reduction in data processing time for future surveys\nCollaborated with software engineers to understand data storage structures and API functionalities, ensuring accurate data retrieval for analysis\n\n\nDatathon Project: Predicting Customer Churn for XYZ Company                                                                           \t               Spring 2025\nLed a team of 4 in the exploration of customer data, uncovering key trends and patterns related to churn\nGuided team in selecting machine learning algorithms using Scikit-learn for churn prediction; oversaw model training, evaluation, and hyperparameter tuning to optimize performance\nPrepared and delivered a final presentation to datathon judges, highlighting key findings and model performance (78% accuracy on unseen test data)\n\n\nProject: Fantasy Football Modeling, Course: Data and Decisions                                                                       \t                             Fall 2024  \nAggregated and prepped 5 years of NFL fantasy football projection data from 6 independent sources into a MySQL database\nBuilt a random forest model in SAS that improved projection accuracy by combining the disparate sources into one projection that outperformed the mean absolute error of the next best projection by 18%\n\n\nProject: Production Control, Course:  System and Analysis Design\t                                                                                          Spring 2024\nLed a team of five students in designing, coding, and implementing a SQL database\nEntered and updated information using the web scraping tool BeautifulSoup\nCompleted analysis and designed documentation with data flow diagrams, structural charts, process specifications, a data dictionary, and a user manual\n\n\nLeadership and Extracurricular Activities\nData Structures Undergraduate Student Instructor, UC Berkeley EECS Dept\t                                       Sept. 2024 - May 2025\nSupported biweekly sections of 100+ students to help reinforce core data structures concepts (e.g. asymptotics, linked lists, trees, searching/sorting algorithms, etc.)\nShaped course curriculum by developing relevant enrichment problems to help students master concepts\n\nCS Educator / Events Committee Member, Berkeley ANova\t                                                                             Sept. 2023 - May 2024\nImproved computer science education in under-resourced communities across the Bay Area\nTaught a weekly project-based after-school program at Bay Area middle schools",
+  "panel_mode": false,
+  "pressure_round": false,
+  "company_context": "",
+  "role_context": "",
+  "interview_date": "2026-04-30",
+  "panel_personas": [],
+  "panel_turn_index": 8,
+  "weak_topic_memory": [
+    "data quality handling",
+    "scalability implementation",
+    "specific technical details",
+    "data preprocessing",
+    "data quality evaluation",
+    "specific Python libraries and functions",
+    "imputation methods",
+    "outlier handling techniques",
+    "data quality evaluation metrics",
+    "Data Validation",
+    "Data Cleansing",
+    "Data Standardization",
+    "Real-time Data Processing",
+    "data quality issue handling",
+    "data preprocessing",
+    "IoT sensor reading analysis",
+    "missing data pattern evaluation",
+    "domain-specific preprocessing requirements",
+    "Data Preprocessing",
+    "Technical Specificity",
+    "Use of Python Libraries",
+    "Handling missing values",
+    "Outlier detection",
+    "Data standardization",
+    "Python libraries (Pandas, Scikit-learn)"
+  ],
+  "target_question_count": 8,
+  "answered_count": 8,
+  "pending_next_step": {},
+  "interview_complete": true,
+  "history": [
+    {
+      "question": "Can you design and explain a Python-based data pipeline to analyze sensor data from IoT devices in a manufacturing setting, such as a metal fabrication factory, and how you would handle potential issues with data quality and scalability?",
+      "answer": "Yes, I can build a Python IoT pipeline where sensor data is ingested via Kafka, cleaned and processed using Pandas/Spark, and used to train ML models like XGBoost or LSTM for failure prediction. Data quality is handled through imputation, outlier removal, and filtering, while scalability is ensured using distributed processing and cloud storage.",
+      "score": 6,
+      "persona": "interviewer",
+      "focus_area": "Data Analysis and IoT Connectivity",
+      "feedback": "The answer provides a general overview of a Python-based data pipeline for IoT sensor data analysis, including data ingestion, processing, and machine learning model training. However, it lacks specific details on the implementation, such as handling potential issues with data quality and scalability, and does not follow a clear structure.",
+      "weak_topics": [
+        "data quality handling",
+        "scalability implementation",
+        "specific technical details"
+      ],
+      "critique": "The answer is too generic and does not provide enough technical depth. It does not explain how the data pipeline would be designed, how data quality issues would be identified and addressed, or how scalability would be ensured in a manufacturing setting.",
+      "rewrite": "In a metal fabrication factory, I would design a Python-based data pipeline using the STAR method. Situation: IoT devices generate vast amounts of sensor data, which needs to be analyzed to predict equipment failures. Task: Build a scalable data pipeline to ingest, process, and analyze sensor data. Action: I would use Kafka for data ingestion, Pandas for data cleaning, and Spark for distributed processing. For machine learning model training, I would use XGBoost or LSTM. To handle data quality issues, I would implement imputation using mean or median values, remove outliers using the IQR method, and filter out noisy data using signal processing techniques. For scalability, I would utilize cloud storage such as AWS S3 or Google Cloud Storage, and distributed processing using Spark or Dask. Result: The pipeline would provide real-time failure predictions, enabling proactive maintenance and reducing downtime."
+    },
+    {
+      "question": "Describe a scenario where you have to handle missing or inconsistent data in a manufacturing setting, such as a metal fabrication factory, and walk me through your approach to identify, clean, and preprocess the data using Python, ensuring that the resulting dataset is reliable and suitable for analysis or modeling.",
+      "answer": "I would use Python (Pandas) to first detect missing values, duplicates, and outliers in sensor data from machines. Then I would clean it using imputation, remove inconsistencies, and standardize the data so it is ready for analysis or ML.",
+      "score": 4,
+      "persona": "interviewer",
+      "focus_area": "Data Quality Handling",
+      "feedback": "The answer lacks specificity and depth. It does not provide a clear structure or measurable impact. The candidate should provide a more detailed approach to handling missing or inconsistent data, including examples of techniques used and metrics for evaluating the quality of the resulting dataset.",
+      "weak_topics": [
+        "data preprocessing",
+        "data quality evaluation",
+        "specific Python libraries and functions"
+      ],
+      "critique": "The answer is too generic and does not demonstrate a thorough understanding of data preprocessing techniques or Python libraries. The candidate should provide more technical details, such as the use of Pandas' `isnull()` function to detect missing values, `drop_duplicates()` to remove duplicates, and `StandardScaler` from Scikit-learn to standardize the data.",
+      "rewrite": "In a metal fabrication factory, I encountered a scenario where sensor data from machines was plagued by missing values, duplicates, and outliers. To address this, I utilized Python's Pandas library to detect missing values using the `isnull()` function, which revealed that 10% of the data was missing. I then employed the `drop_duplicates()` function to remove duplicate entries, resulting in a 5% reduction in dataset size. Next, I used the `Interpolate()` function to impute missing values and the `StandardScaler` from Scikit-learn to standardize the data. After preprocessing, I evaluated the quality of the resulting dataset using metrics such as mean absolute error (MAE) and coefficient of variation (CV), which showed a significant improvement in data reliability and suitability for analysis or modeling."
+    },
+    {
+      "question": "Can you elaborate on the specific Python libraries and functions you would use for imputation, handling outliers, and standardizing the data, and how you would evaluate the quality of the preprocessed data to ensure it's reliable for analysis or modeling?",
+      "answer": "I would use Pandas for imputation like fillna(), NumPy or Pandas for outliers like IQR method and scikit-learn for standardization using StandardScaler.\n\nTo check data quality, I would re-verify missing values, check summary statistics, visualize distributions, and ensure the data looks consistent and stable before feeding it into a model.",
+      "score": 6,
+      "persona": "interviewer",
+      "focus_area": "Data Quality Handling and Software Development",
+      "feedback": "The answer provides some specific libraries and functions for data preprocessing but lacks depth and clarity in explaining the process and evaluation of data quality.",
+      "weak_topics": [
+        "imputation methods",
+        "outlier handling techniques",
+        "data quality evaluation metrics"
+      ],
+      "critique": "The answer is too brief and does not provide a clear structure for the data preprocessing pipeline. It also does not mention any specific metrics or techniques for evaluating the quality of the preprocessed data.",
+      "rewrite": "I would utilize Pandas' fillna() function for mean, median, or imputation using regression, and also explore using K-Nearest Neighbors (KNN) imputation from the Imputer class in scikit-learn for more complex datasets. For handling outliers, I would employ the Interquartile Range (IQR) method using NumPy's percentile function, and also consider using the Z-score method or Modified Z-score method for more robust detection. For standardization, I would use scikit-learn's StandardScaler. To evaluate the quality of the preprocessed data, I would calculate metrics such as mean, standard deviation, and variance, and visualize the distributions using histograms and box plots to ensure they are consistent and stable. I would also use metrics like MAE or RMSE to evaluate the imputation quality and compare the results with different imputation methods to ensure the chosen method is reliable."
+    },
+    {
+      "question": "Design a Python-based system to monitor and handle data quality issues in real-time for IoT sensor data from a metal fabrication factory, ensuring that the data is reliable and suitable for analysis or modeling, and explain how you would implement data validation, data cleansing, and data standardization using Python libraries such as Pandas and Scikit-learn.",
+      "answer": "im not sure",
+      "score": 0,
+      "persona": "interviewer",
+      "focus_area": "Data Quality Handling and Software Development",
+      "feedback": "The answer lacks clarity, structure, and technical accuracy. It does not provide any meaningful information about designing a system to monitor and handle data quality issues in real-time for IoT sensor data.",
+      "weak_topics": [
+        "Data Validation",
+        "Data Cleansing",
+        "Data Standardization",
+        "Real-time Data Processing"
+      ],
+      "critique": "The answer is extremely vague and does not demonstrate any understanding of the problem or the required technical skills. A stronger answer would provide a clear structure, including a specific approach to data validation, cleansing, and standardization, as well as the use of relevant Python libraries.",
+      "rewrite": "To design a Python-based system for monitoring and handling data quality issues in real-time for IoT sensor data from a metal fabrication factory, I would follow the STAR method. Situation: First, I would assess the current data infrastructure and identify potential sources of data quality issues. Task: Next, I would define the requirements for data validation, cleansing, and standardization. Action: I would use Pandas for data manipulation and Scikit-learn for data modeling. Specifically, I would implement data validation using Pandas' data typing and data cleansing using Scikit-learn's handling of missing values. For data standardization, I would use Scikit-learn's scaling and normalization techniques. Result: The outcome would be a reliable and efficient system for ensuring high-quality IoT sensor data, suitable for analysis or modeling."
+    },
+    {
+      "question": "How would you handle data quality issues, such as missing or inconsistent values, in a dataset of IoT sensor readings from a metal fabrication factory, and what Python libraries or functions would you use to clean and preprocess the data for analysis or modeling?",
+      "answer": "For preprocessing, I would standardize features using scikit-learn’s StandardScaler and ensure consistent formats (like timestamps) before analysis or modeling.",
+      "score": 4,
+      "persona": "interviewer",
+      "focus_area": "Data Quality Handling",
+      "feedback": "The answer lacks a clear structure and depth in addressing data quality issues. It only mentions standardizing features and ensuring consistent formats without providing a comprehensive approach to handling missing or inconsistent values.",
+      "weak_topics": [
+        "data quality issue handling",
+        "data preprocessing",
+        "IoT sensor reading analysis"
+      ],
+      "critique": "The answer is too generic and does not provide specific details on how to handle missing or inconsistent values in IoT sensor readings. It also does not mention any error handling or data validation techniques.",
+      "rewrite": "When handling data quality issues in a dataset of IoT sensor readings from a metal fabrication factory, I would follow the STAR method. First, I would identify the problem by analyzing the dataset for missing or inconsistent values using pandas' isnull() function and data validation techniques. Next, I would take action by using techniques such as imputation using scikit-learn's SimpleImputer or interpolation using scipy's interpolate function to handle missing values. I would also use data transformation techniques, such as standardizing features using scikit-learn's StandardScaler, to ensure consistent formats. Then, I would analyze the results by visualizing the cleaned data using matplotlib and seaborn to ensure that it is consistent and accurate. Finally, I would review the outcome by evaluating the performance of the cleaned data in analysis or modeling using metrics such as mean absolute error or R-squared."
+    },
+    {
+      "question": "Can you explain how you would approach data preprocessing for IoT sensor data in a metal fabrication factory, specifically focusing on handling missing values and outliers, and what Python libraries or functions you would use to ensure the data is reliable and suitable for analysis or modeling?",
+      "answer": "I would start by using Pandas to inspect the IoT sensor data and identify missing values and outliers using functions like isnull() and descriptive statistics. For missing data, I would use fillna() depending on the pattern of the data, and for outliers, I would apply methods like the IQR technique or use clip() to limit extreme values.\n\nAfter cleaning, I would standardize and preprocess the data using NumPy, Pandas, and scikit-learn’s StandardScaler to ensure all features are on a consistent scale. This makes the dataset reliable and suitable for analysis or machine learning models.",
+      "score": 7,
+      "persona": "interviewer",
+      "focus_area": "Data Preprocessing and Quality Handling",
+      "feedback": "The answer demonstrates a clear understanding of the general approach to data preprocessing for IoT sensor data, including handling missing values and outliers. However, it lacks specific details on the evaluation of missing data patterns, the choice of imputation method, and the consideration of domain-specific requirements for data preprocessing in a metal fabrication factory.",
+      "weak_topics": [
+        "missing data pattern evaluation",
+        "domain-specific preprocessing requirements"
+      ],
+      "critique": "The answer relies heavily on general data preprocessing techniques without considering the unique aspects of IoT sensor data in a metal fabrication factory. It also does not provide a clear structure for the approach, such as using the STAR method to describe a specific scenario, task, action, and result.",
+      "rewrite": "In a metal fabrication factory, I encountered a project where IoT sensor data was used to predict equipment failures. To approach data preprocessing, I started by using Pandas to inspect the data and identify missing values and outliers. I applied the isnull() function to detect missing values and descriptive statistics to understand the data distribution. For missing data, I evaluated the pattern and chose an appropriate imputation method, such as mean, median, or interpolation, depending on the data type and domain knowledge. For outliers, I used the IQR technique to detect and clip extreme values using scikit-learn's RobustScaler. After cleaning, I standardized and preprocessed the data using NumPy, Pandas, and scikit-learn's StandardScaler to ensure all features were on a consistent scale, which improved the reliability and suitability of the dataset for analysis and machine learning models."
+    },
+    {
+      "question": "Can you walk me through your process for handling missing or inconsistent data in a dataset, specifically focusing on the use of Python libraries such as Pandas and NumPy, and how you would evaluate the quality of the preprocessed data to ensure it's reliable for analysis or modeling?",
+      "answer": "To ensure quality, I would recheck for remaining nulls, verify data distributions, and compare summary statistics before and after cleaning to make sure the dataset is consistent and reliable for analysis or modeling.",
+      "score": 4,
+      "persona": "interviewer",
+      "focus_area": "Data Preprocessing and Quality Handling",
+      "feedback": "The answer lacks a clear structure and does not provide specific technical details on handling missing or inconsistent data using Python libraries like Pandas and NumPy. It briefly mentions verifying data distributions and comparing summary statistics but does not elaborate on the process or the use of specific libraries.",
+      "weak_topics": [
+        "Data Preprocessing",
+        "Technical Specificity",
+        "Use of Python Libraries"
+      ],
+      "critique": "The answer is too vague and does not demonstrate a thorough understanding of data preprocessing techniques or the application of Pandas and NumPy for handling missing or inconsistent data. It fails to provide a step-by-step approach or mention key functions from these libraries that are crucial for data cleaning and verification.",
+      "rewrite": "When handling missing or inconsistent data, I follow a structured approach using Python libraries such as Pandas and NumPy. First, I import the necessary libraries and load the dataset into a Pandas DataFrame. Then, I use the `isnull()` function to identify missing values and the `describe()` method to understand the data distribution. Next, I apply appropriate strategies for handling missing data, such as using `dropna()` for removing rows with missing values or `fillna()` for replacing them with mean, median, or imputed values. After cleaning, I verify the data quality by comparing summary statistics before and after the cleaning process using `summary()` and visualizing the data distributions with `matplotlib` or `seaborn`. This ensures that the preprocessed data is consistent and reliable for further analysis or modeling."
+    },
+    {
+      "question": "Describe a scenario where you have to preprocess IoT sensor data from a metal fabrication factory for analysis, focusing on handling missing values and outliers. Explain how you would use Python libraries such as Pandas and Scikit-learn to ensure the data quality, and discuss the importance of data standardization in this context.",
+      "answer": "i am unsure",
+      "score": 0,
+      "persona": "interviewer",
+      "focus_area": "Data Preprocessing and Quality Handling",
+      "feedback": "The answer lacks clarity, structure, and technical depth, failing to address the question's requirements.",
+      "weak_topics": [
+        "Handling missing values",
+        "Outlier detection",
+        "Data standardization",
+        "Python libraries (Pandas, Scikit-learn)"
+      ],
+      "critique": "The answer does not provide a specific scenario, and it does not demonstrate an understanding of how to preprocess IoT sensor data, handle missing values, or detect outliers using Python libraries.",
+      "rewrite": "In a metal fabrication factory, I encountered a scenario where IoT sensor data was plagued by missing values and outliers, affecting the accuracy of our analysis. To address this, I utilized Pandas to identify and impute missing values using the mean or median of the respective feature, and Scikit-learn's Isolation Forest to detect outliers. I then applied data standardization using StandardScaler from Scikit-learn to ensure all features were on the same scale, which improved the model's performance and interpretability. By following this preprocessing pipeline, I was able to significantly enhance the quality of the data, resulting in more reliable insights for the factory's operations."
+    }
+  ]
+}

@@ -21,6 +21,22 @@ DEFAULT_MEMORY: Dict[str, Any] = {
     "answered_count": 0,
     "pending_next_step": {},
     "interview_complete": False,
+    "final_evaluation": "",
+    "debrief_actions": [],
+    "next_round_target": "",
+    "curriculum_plan": [],
+    "completed_at": "",
+    "system_metrics": {
+        "latency_ms_avg": 0.0,
+        "consistency_score": 0.0,
+        "drift_score": 0.0,
+    },
+    "resume_job_match": {
+        "skill_overlap_pct": 0.0,
+        "keyword_match_score": 0.0,
+        "experience_alignment_score": 0.0,
+        "ats_style_score": 0.0,
+    },
     "history": [],
 }
 

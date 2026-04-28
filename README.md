@@ -318,6 +318,7 @@ The app defaults the API to `**http://127.0.0.1:8000**`. To point elsewhere, set
 ## Persistence & storage
 
 - **Interview:** state is kept per `session_id` under `job-agent-backend/storage/` (see `app/utils/memory.py`).
+- **Evaluation artifacts:** export deterministic dataset/results files to `job-agent-backend/storage/evaluation/` with `python job-agent-backend/scripts/export_evaluation_artifacts.py`.
 - **Browser:** account/session hints, lightweight workspace drafts, and interview archive metadata may be stored in `localStorage` (frontend only).
 
 Add `storage/` patterns to `.gitignore` if you do not want runtime artifacts committed (evaluate per your team’s preference).

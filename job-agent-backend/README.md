@@ -275,5 +275,6 @@ Generates a recruiter- or hiring-manager-ready message (email or LinkedIn style)
 - Mode is chosen by the client (`behavioral` or `technical`), not inferred by the LLM alone.
 - Interview history is persisted per `session_id` (see `app/utils/memory.py` and files under `storage/`).
 - Session files are persisted under `storage/memory_*.json`.
+- Export commit-friendly evaluation artifacts with `python job-agent-backend/scripts/export_evaluation_artifacts.py` (writes to `storage/evaluation/`).
 - If Groq is rate-limited (`429`), interview routes can fall back to starter/follow-up question templates.
 - `/frame-message` does not persist state; each call is independent.

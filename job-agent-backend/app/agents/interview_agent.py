@@ -2,6 +2,7 @@ import json
 import re
 from collections import Counter
 from datetime import date, datetime
+from statistics import pstdev
 from typing import Any, Dict, List, Set
 
 from app.utils.llm import call_llm
@@ -393,6 +394,145 @@ Answer:
         "weak_topics": weak_topics,
         "critique": critique,
         "rewrite": rewrite,
+    }
+
+
+def _tokenize_text(text: str) -> List[str]:
+    return re.findall(r"[a-zA-Z][a-zA-Z0-9_+\-/\.#]*", text.lower())
+
+
+def _keyword_set(text: str) -> Set[str]:
+    stop_words = {
+        "the",
+        "and",
+        "for",
+        "with",
+        "that",
+        "this",
+        "from",
+        "into",
+        "your",
+        "have",
+        "will",
+        "you",
+        "about",
+        "role",
+        "work",
+        "team",
+        "years",
+        "year",
+        "experience",
+        "required",
+        "preferred",
+        "ability",
+    }
+    return {tok for tok in _tokenize_text(text) if len(tok) >= 3 and tok not in stop_words}
+
+
+def _bounded_percentage(value: float) -> float:
+    return round(max(0.0, min(100.0, value)), 2)
+
+
+def compute_resume_job_match_metrics(resume: str, job_description: str) -> Dict[str, float]:
+    resume_keywords = _keyword_set(resume)
+    job_keywords = _keyword_set(job_description)
+    overlap = resume_keywords & job_keywords
+    skill_overlap_pct = (len(overlap) / len(job_keywords) * 100.0) if job_keywords else 0.0
+    keyword_match_score = skill_overlap_pct
+
+    experience_match = re.search(r"(\d+)\+?\s*(?:years|year|yrs|yr)", resume.lower())
+    has_experience_signal = 1.0 if experience_match else 0.0
+    role_alignment_terms = ["engineer", "developer", "analyst", "manager", "scientist", "intern"]
+    role_overlap = 1.0 if any(t in resume.lower() and t in job_description.lower() for t in role_alignment_terms) else 0.0
+    experience_alignment_score = _bounded_percentage((0.65 * has_experience_signal + 0.35 * role_overlap) * 100.0)
+
+    ats_style_score = _bounded_percentage((0.7 * keyword_match_score) + (0.3 * experience_alignment_score))
+    return {
+        "skill_overlap_pct": _bounded_percentage(skill_overlap_pct),
+        "keyword_match_score": _bounded_percentage(keyword_match_score),
+        "experience_alignment_score": experience_alignment_score,
+        "ats_style_score": ats_style_score,
+    }
+
+
+def _star_signal_score(answer: str) -> float:
+    text = answer.lower()
+    signals = 0
+    patterns = [
+        r"\bsituation\b|\bcontext\b",
+        r"\btask\b|\bgoal\b|\bobjective\b",
+        r"\baction\b|\bi did\b|\bwe did\b|\bimplemented\b|\bbuilt\b|\bled\b",
+        r"\bresult\b|\boutcome\b|\bimpact\b|\bincreased\b|\breduced\b|\bimproved\b",
+    ]
+    for pattern in patterns:
+        if re.search(pattern, text):
+            signals += 1
+    return _bounded_percentage((signals / 4.0) * 100.0)
+
+
+def compute_answer_metrics(
+    question: str,
+    answer: str,
+    score: int,
+    mode: str,
+    weak_topics: List[str],
+    response_time_seconds: float | None = None,
+) -> Dict[str, Any]:
+    answer_tokens = _keyword_set(answer)
+    question_tokens = _keyword_set(question)
+    overlap = question_tokens & answer_tokens
+    relevance = _bounded_percentage((len(overlap) / len(question_tokens) * 100.0) if question_tokens else 0.0)
+    clarity = _bounded_percentage(min(100.0, max(20.0, score * 10 + 10)))
+    depth = _bounded_percentage(min(100.0, 15.0 + (len(answer.split()) / 2.0)))
+    confidence_score = round(score / 10.0, 3)
+    correctness = _bounded_percentage(score * 10.0 if mode != "technical" else score * 9.5 + (5.0 if score >= 6 else 0.0))
+    technical_accuracy_pct = correctness if mode == "technical" else 0.0
+    star_format_usage = _star_signal_score(answer) if mode == "behavioral" else 0.0
+    answer_length = len(answer.split())
+    simulated_response_time_seconds = (
+        round(float(response_time_seconds), 2) if isinstance(response_time_seconds, (int, float)) else round(max(5, answer_length // 3), 2)
+    )
+    drift_risk = _bounded_percentage((len(weak_topics) * 8.0) + (100.0 - clarity) * 0.25)
+
+    return {
+        "relevance_score": relevance,
+        "correctness_score": correctness,
+        "clarity_score": clarity,
+        "depth_score": depth,
+        "confidence_score": confidence_score,
+        "technical_accuracy_pct": technical_accuracy_pct,
+        "star_format_usage_pct": star_format_usage,
+        "answer_length_words": answer_length,
+        "response_time_seconds": simulated_response_time_seconds,
+        "drift_risk_score": drift_risk,
+    }
+
+
+def compute_session_system_metrics(history: List[Dict[str, Any]]) -> Dict[str, float]:
+    scored = [item for item in history if isinstance(item, dict) and isinstance(item.get("score"), int)]
+    if not scored:
+        return {"latency_ms_avg": 0.0, "consistency_score": 0.0, "drift_score": 0.0}
+
+    latencies = [
+        float(item.get("evaluation_latency_ms", 0.0))
+        for item in scored
+        if isinstance(item.get("evaluation_latency_ms"), (int, float))
+    ]
+    scores = [float(item["score"]) for item in scored]
+    drift_risks = [
+        float(item.get("drift_risk_score", 0.0))
+        for item in scored
+        if isinstance(item.get("drift_risk_score"), (int, float))
+    ]
+
+    score_std = pstdev(scores) if len(scores) > 1 else 0.0
+    consistency_score = _bounded_percentage(max(0.0, 100.0 - (score_std * 12.0)))
+    drift_score = _bounded_percentage(sum(drift_risks) / len(drift_risks)) if drift_risks else 0.0
+    latency_ms_avg = round(sum(latencies) / len(latencies), 2) if latencies else 0.0
+    return {
+        "latency_ms_avg": latency_ms_avg,
+        "consistency_score": consistency_score,
+        "drift_score": drift_score,
     }
 
 

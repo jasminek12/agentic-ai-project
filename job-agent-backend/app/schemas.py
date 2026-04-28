@@ -151,6 +151,22 @@ class SubmitAnswerResponse(BaseModel):
         default="",
         description="Overall interview performance summary. Present only when interview is complete.",
     )
+    relevance_score: float = Field(default=0.0, ge=0, le=100)
+    correctness_score: float = Field(default=0.0, ge=0, le=100)
+    clarity_score: float = Field(default=0.0, ge=0, le=100)
+    depth_score: float = Field(default=0.0, ge=0, le=100)
+    confidence_score: float = Field(default=0.0, ge=0, le=1)
+    technical_accuracy_pct: float = Field(default=0.0, ge=0, le=100)
+    star_format_usage_pct: float = Field(default=0.0, ge=0, le=100)
+    answer_length_words: int = Field(default=0, ge=0)
+    response_time_seconds: float = Field(default=0.0, ge=0)
+    evaluation_latency_ms: float = Field(default=0.0, ge=0)
+    skill_overlap_pct: float = Field(default=0.0, ge=0, le=100)
+    keyword_match_score: float = Field(default=0.0, ge=0, le=100)
+    experience_alignment_score: float = Field(default=0.0, ge=0, le=100)
+    ats_style_score: float = Field(default=0.0, ge=0, le=100)
+    consistency_score: float = Field(default=0.0, ge=0, le=100)
+    drift_score: float = Field(default=0.0, ge=0, le=100)
 
 
 class InterviewAnswerResponse(SubmitAnswerResponse):
@@ -211,6 +227,17 @@ class InterviewHistoryItem(BaseModel):
     question: str
     answer: Optional[str] = ""
     score: Optional[int] = None
+    relevance_score: Optional[float] = 0.0
+    correctness_score: Optional[float] = 0.0
+    clarity_score: Optional[float] = 0.0
+    depth_score: Optional[float] = 0.0
+    confidence_score: Optional[float] = 0.0
+    technical_accuracy_pct: Optional[float] = 0.0
+    star_format_usage_pct: Optional[float] = 0.0
+    answer_length_words: Optional[int] = 0
+    response_time_seconds: Optional[float] = 0.0
+    evaluation_latency_ms: Optional[float] = 0.0
+    asked_at: Optional[str] = ""
 
 
 class InterviewMemory(BaseModel):
@@ -229,6 +256,13 @@ class InterviewMemory(BaseModel):
     answered_count: int = 0
     pending_next_step: Dict[str, str] = Field(default_factory=dict)
     interview_complete: bool = False
+    final_evaluation: str = ""
+    debrief_actions: List[str] = Field(default_factory=list)
+    next_round_target: str = ""
+    curriculum_plan: List[str] = Field(default_factory=list)
+    completed_at: str = ""
+    system_metrics: Dict[str, float] = Field(default_factory=dict)
+    resume_job_match: Dict[str, float] = Field(default_factory=dict)
     history: List[InterviewHistoryItem] = Field(default_factory=list)
 
 
