@@ -431,16 +431,25 @@ Generated evidence files include:
 Detailed criterion data is organized as follows:
 - `evaluation/correctness-benchmark/`
   - `benchmark_questions.csv`: row-level correctness labels/scores for each evaluated Q/A pair
-  - `summary.csv`: baseline vs improved correctness percentages and delta
+  - `summary.csv`: `total_rows`, `correct_rows`, `correctness_pct`, `baseline_correctness_pct`, `improved_correctness_pct`, `delta_pct_points`
 - `evaluation/clarity-structure-review/`
   - `scored_responses.csv`: row-level 1-5 clarity/structure scores and pass/fail for minimum standard
-  - `summary.csv`: baseline vs improved average clarity and delta
+  - `summary.csv`: `total_rows`, `avg_clarity_baseline`, `avg_clarity_improved`, `delta_points`, `meets_minimum_standard_pct`
 - `evaluation/depth-analysis/`
   - `scored_depth.csv`: row-level depth indicators (reasoning/examples/tradeoffs) plus depth score
-  - `summary.csv`: baseline vs improved depth averages and indicator rates
+  - `summary.csv`: `total_rows`, `avg_depth_baseline`, `avg_depth_improved`, `delta_points`, `reasoning_present_pct`, `examples_present_pct`, `tradeoffs_present_pct`
 - `evaluation/relevance-alignment/`
   - `jd_alignment.csv`: row-level relevance to role/JD keywords with relevance and keyword-coverage scores
-  - `summary.csv`: baseline vs improved relevance/keyword coverage and deltas
+  - `summary.csv`: `avg_relevance_baseline`, `avg_relevance_improved`, `relevance_delta_points`, `avg_keyword_coverage_baseline`, `avg_keyword_coverage_improved`, `keyword_coverage_delta_points`
+
+`evaluation/overall_summary.md` is the single combined narrative report that aggregates the four criteria above into a grader-friendly snapshot (baseline, improved, and deltas).
+
+How to interpret summary values:
+- `baseline_*` columns = average/percentage over rows labeled `baseline`
+- `improved_*` columns = average/percentage over rows labeled `improved`
+- `delta` columns = `improved - baseline` (negative means worse than baseline; positive means better)
+- For 1-5 score metrics (clarity, depth, relevance), higher is better
+- For percentage metrics (`*_pct`), values are on a 0-100 scale
 
 `baseline` and `improved` are run labels in the dataset (not separate model names). During seeding, `evaluation/bootstrap_from_raw.py` assigns the first half of discovered sessions to `baseline` and the second half to `improved`.
 
