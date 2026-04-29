@@ -428,7 +428,21 @@ Generated evidence files include:
 - `evaluation/relevance-alignment/summary.csv`
 - `evaluation/overall_summary.md`
 
-Intermediate/generated inputs for those summaries are also stored under the corresponding `evaluation/*/` subfolders (for example `scored_responses.csv` and related criterion artifacts).
+Detailed criterion data is organized as follows:
+- `evaluation/correctness-benchmark/`
+  - `benchmark_questions.csv`: row-level correctness labels/scores for each evaluated Q/A pair
+  - `summary.csv`: baseline vs improved correctness percentages and delta
+- `evaluation/clarity-structure-review/`
+  - `scored_responses.csv`: row-level 1-5 clarity/structure scores and pass/fail for minimum standard
+  - `summary.csv`: baseline vs improved average clarity and delta
+- `evaluation/depth-analysis/`
+  - `scored_depth.csv`: row-level depth indicators (reasoning/examples/tradeoffs) plus depth score
+  - `summary.csv`: baseline vs improved depth averages and indicator rates
+- `evaluation/relevance-alignment/`
+  - `jd_alignment.csv`: row-level relevance to role/JD keywords with relevance and keyword-coverage scores
+  - `summary.csv`: baseline vs improved relevance/keyword coverage and deltas
+
+`baseline` and `improved` are run labels in the dataset (not separate model names). During seeding, `evaluation/bootstrap_from_raw.py` assigns the first half of discovered sessions to `baseline` and the second half to `improved`.
 
 ---
 
