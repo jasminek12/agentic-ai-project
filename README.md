@@ -29,8 +29,7 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (structured 
 - [Frontend](#frontend)
 - [Persistence & storage](#persistence--storage)
 - [Evaluation workflow](#evaluation-workflow)
-- [Production notes](#production-notes)
-- [Troubleshooting](#troubleshooting)
+- [Code source declaration](#code-source-declaration)
 - [Roadmap](#roadmap)
 - [Contributing & license](#contributing--license)
 
@@ -153,9 +152,15 @@ agentic-interview-helper/     # project root (your clone folder name may differ)
 
 ## Prerequisites
 
-- **Python 3.10+** (virtualenv or Conda is fine)
-- **Node.js 18+**
-- A **Groq** account and API key
+To run this project locally, evaluators need:
+
+- **Python 3.10+** (virtualenv or Conda is fine) for the backend
+- **Node.js 18+** and **npm** for the frontend
+- A **Groq account** and a **Groq API key** (you must generate your own key; it is not included in this repo)
+- Internet access for Groq API calls during resume/interview/outreach generation
+- Two terminal windows (one for backend, one for frontend)
+
+Not required: Docker, database setup, or additional cloud services.
 
 ---
 
@@ -172,16 +177,63 @@ agentic-interview-helper/     # project root (your clone folder name may differ)
 
 ## Quick start
 
-Use **two terminals**. On Windows, **PowerShell** examples below; on macOS/Linux, use `source .venv/bin/activate` instead of `.\.venv\Scripts\Activate.ps1`.
+Use **two terminals** (Terminal A for backend, Terminal B for frontend).
 
-### 1) Backend API
+### 1) Create your Groq API key (required before backend start)
+
+1. Go to [https://console.groq.com/](https://console.groq.com/) and sign in.
+2. Open **API Keys**.
+3. Click **Create API Key**.
+4. Copy the key value immediately (Groq may only show it once).
+5. Set the variable in your backend terminal:
+
+**Windows (PowerShell)**
+
+```powershell
+$env:GROQ_API_KEY="paste_your_real_groq_key_here"
+```
+
+**macOS/Linux (bash/zsh)**
+
+```bash
+export GROQ_API_KEY="paste_your_real_groq_key_here"
+```
+
+6. Verify it is set in the same terminal:
+
+**Windows (PowerShell)**
+
+```powershell
+echo $env:GROQ_API_KEY
+```
+
+**macOS/Linux (bash/zsh)**
+
+```bash
+echo $GROQ_API_KEY
+```
+
+If this prints nothing, the backend will not start.
+
+### 2) Backend API
+
+**Windows (PowerShell)**
 
 ```powershell
 cd job-agent-backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-$env:GROQ_API_KEY="your_groq_api_key_here"
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+**macOS/Linux (bash/zsh)**
+
+```bash
+cd job-agent-backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -195,9 +247,19 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)     | Swagger UI            |
 
 
-### 2) Frontend
+### 3) Frontend
+
+**Windows (PowerShell)**
 
 ```powershell
+cd job-agent-frontend
+npm install
+npm run dev
+```
+
+**macOS/Linux (bash/zsh)**
+
+```bash
 cd job-agent-frontend
 npm install
 npm run dev
@@ -339,48 +401,42 @@ Add `storage/` patterns to `.gitignore` if you do not want runtime artifacts com
 
 ## Evaluation workflow
 
-Use this flow when you want evidence artifacts for the 4 criteria (correctness, clarity/structure, depth, relevance):
+This section documents how we generated our evaluation evidence for the 4 criteria (correctness, clarity/structure, depth, relevance). These are the steps we ran during project evaluation.
 
-1. Export raw artifacts from backend memory:
+1. We exported raw artifacts from backend memory:
 
 ```powershell
 python job-agent-backend/scripts/export_evaluation_artifacts.py
 ```
 
-2. Seed the evaluation templates from raw data:
+2. We seeded the evaluation templates from raw data:
 
 ```powershell
 python evaluation/bootstrap_from_raw.py
 ```
 
-3. Generate criterion summaries and an overall report:
+3. We generated criterion summaries and the overall report:
 
 ```powershell
 python evaluation/run_evaluation.py
 ```
 
-Output artifacts are written under `evaluation/` (criterion-level `summary.csv` files plus `overall_summary.md`).
+Generated evidence files include:
+- `evaluation/correctness-benchmark/summary.csv`
+- `evaluation/clarity-structure-review/summary.csv`
+- `evaluation/depth-analysis/summary.csv`
+- `evaluation/relevance-alignment/summary.csv`
+- `evaluation/overall_summary.md`
+
+Intermediate/generated inputs for those summaries are also stored under the corresponding `evaluation/*/` subfolders (for example `scored_responses.csv` and related criterion artifacts).
 
 ---
 
-## Production notes
+## Code source declaration
 
-- **CORS:** `job-agent-backend/app/main.py` uses `allow_origins=["*"]` for local dev. For production, **restrict** `allow_origins` to your real frontend origin(s).
-- **Secrets:** never commit `GROQ_API_KEY`; use your host’s secret manager or env injection.
-- **HTTPS:** terminate TLS at your reverse proxy or platform; serve the SPA over HTTPS when possible.
-
----
-
-## Troubleshooting
-
-
-| Problem                                      | Likely fix                                                                 |
-| -------------------------------------------- | -------------------------------------------------------------------------- |
-| `ModuleNotFoundError: No module named 'app'` | `cd job-agent-backend` before `uvicorn app.main:app ...`                   |
-| Backend crashes on import                    | Set `GROQ_API_KEY` before starting (required by `config.py`).              |
-| `Failed to start interview.`                 | Check backend logs. Common cause: Groq 429 rate limit; backend now falls back to starter/follow-up questions when possible. |
-| Frontend cannot reach API                    | Confirm backend is up; set `VITE_API_BASE_URL` if not on `127.0.0.1:8000`. |
-| CORS in production                           | Replace `allow_origins=["*"]` with your frontend URL.                      |
+- Backend code was developed with assistance from **ChatGPT** and **Cursor**.
+- Frontend code was developed with assistance from **Codex**.
+- Whenever functionality broke or behaved incorrectly between generated outputs, we **manually edited and corrected** the affected parts.
 
 
 ---
