@@ -39,35 +39,53 @@ job-agent-backend/
 └── README.md
 ```
 
+## Prerequisites
+
+- Python 3.10+
+- A Groq account and API key (must be created by the evaluator; not included in this repo)
+- Internet access for Groq-backed generation
+
 ## Setup
 
-1. Create and activate a Python virtual environment.
-2. Install dependencies:
+Run commands from the `job-agent-backend` directory.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Windows (PowerShell)
 
-3. Set the Groq API key:
+```powershell
+cd job-agent-backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+$env:GROQ_API_KEY="paste_your_real_groq_key_here"
+echo $env:GROQ_API_KEY
+```
 
-   ```bash
-   set GROQ_API_KEY=your_groq_api_key
-   ```
+### macOS/Linux (bash/zsh)
 
-   PowerShell:
+```bash
+cd job-agent-backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export GROQ_API_KEY="paste_your_real_groq_key_here"
+echo $GROQ_API_KEY
+```
 
-   ```powershell
-   $env:GROQ_API_KEY="your_groq_api_key"
-   ```
-
-4. No extra system dependency is required for the current structured resume output flow.
+If the `echo` command prints nothing, the backend will fail to start because `GROQ_API_KEY` is required at import time.
 
 ## Run Server
 
 From the **`job-agent-backend`** directory (so `app` imports resolve):
 
+### Windows (PowerShell)
+
+```powershell
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+### macOS/Linux (bash/zsh)
+
 ```bash
-cd job-agent-backend
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
@@ -266,15 +284,11 @@ Generates a recruiter- or hiring-manager-ready message (email or LinkedIn style)
 
 ---
 
-## CORS
-
-`app/main.py` enables permissive CORS (`allow_origins=["*"]`) for local development. **Tighten `allow_origins` in production** to your deployed frontend origin(s).
-
 ## Notes
 
 - Mode is chosen by the client (`behavioral` or `technical`), not inferred by the LLM alone.
 - Interview history is persisted per `session_id` (see `app/utils/memory.py` and files under `storage/`).
 - Session files are persisted under `storage/memory_*.json`.
-- Export commit-friendly evaluation artifacts with `python job-agent-backend/scripts/export_evaluation_artifacts.py` (writes to `storage/evaluation/`).
+- Export evaluation artifacts with `python job-agent-backend/scripts/export_evaluation_artifacts.py` (raw outputs are kept under backend `storage/` and consumed by the repo-level `evaluation/` workflow).
 - If Groq is rate-limited (`429`), interview routes can fall back to starter/follow-up question templates.
 - `/frame-message` does not persist state; each call is independent.

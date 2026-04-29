@@ -21,12 +21,24 @@
 
 ## Prerequisites
 
-- Node.js 18+
+- Node.js 18+ and npm
 - Running backend server at `http://127.0.0.1:8000` (or configure a custom URL)
+- Backend dependencies installed in `job-agent-backend` via `pip install -r requirements.txt`
+- Valid `GROQ_API_KEY` set in the backend terminal before starting backend
 
 ## Setup
 
+### Windows (PowerShell)
+
+```powershell
+cd job-agent-frontend
+npm install
+```
+
+### macOS/Linux (bash/zsh)
+
 ```bash
+cd job-agent-frontend
 npm install
 ```
 
@@ -37,6 +49,14 @@ VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
 ## Run
+
+### Windows (PowerShell)
+
+```powershell
+npm run dev
+```
+
+### macOS/Linux (bash/zsh)
 
 ```bash
 npm run dev
