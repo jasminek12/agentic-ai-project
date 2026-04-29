@@ -28,6 +28,7 @@ Full-stack **MVP** for interview prep: **tailor a resume to a job** (structured 
 - [HTTP API (backend)](#http-api-backend)
 - [Frontend](#frontend)
 - [Persistence & storage](#persistence--storage)
+- [Evaluation workflow](#evaluation-workflow)
 - [Production notes](#production-notes)
 - [Troubleshooting](#troubleshooting)
 - [Roadmap](#roadmap)
@@ -100,6 +101,13 @@ flowchart LR
 agentic-interview-helper/     # project root (your clone folder name may differ)
 ├── README.md                 # repo overview, setup, API summary
 ├── .gitignore                # git ignore patterns for repo-wide artifacts
+├── evaluation/               # 4-criteria evaluation toolkit + summary scripts
+│   ├── correctness-benchmark/
+│   ├── clarity-structure-review/
+│   ├── depth-analysis/
+│   ├── relevance-alignment/
+│   ├── bootstrap_from_raw.py # seeds templates from backend raw artifacts
+│   └── run_evaluation.py     # computes summary CSV/Markdown evidence
 ├── job-agent-backend/        # FastAPI backend: resume/interview/outreach APIs
 │   ├── app/
 │   │   ├── __init__.py       # package marker
@@ -119,6 +127,7 @@ agentic-interview-helper/     # project root (your clone folder name may differ)
 │   │       ├── memory.py             # per-session memory file persistence
 │   │       └── latex.py              # legacy latex helper utilities
 │   ├── storage/               # runtime artifacts
+│   │   ├── raw-evaluation-data/ # exported dataset/results snapshots
 │   │   ├── memory_*.json      # per-session interview memory snapshots
 │   │   └── outputs/           # optional/legacy generated output files
 │   ├── requirements.txt       # Python dependencies
@@ -318,10 +327,39 @@ The app defaults the API to `**http://127.0.0.1:8000**`. To point elsewhere, set
 ## Persistence & storage
 
 - **Interview:** state is kept per `session_id` under `job-agent-backend/storage/` (see `app/utils/memory.py`).
-- **Evaluation artifacts:** export deterministic dataset/results files to `job-agent-backend/storage/evaluation/` with `python job-agent-backend/scripts/export_evaluation_artifacts.py`.
+- **Raw evaluation artifacts:** export deterministic dataset/results files to `job-agent-backend/storage/raw-evaluation-data/` with `python job-agent-backend/scripts/export_evaluation_artifacts.py`.
+- **Evaluation evidence kit:** seed and summarize the 4 criteria from the repo-root `evaluation/` folder:
+  - `python evaluation/bootstrap_from_raw.py`
+  - `python evaluation/run_evaluation.py`
 - **Browser:** account/session hints, lightweight workspace drafts, and interview archive metadata may be stored in `localStorage` (frontend only).
 
 Add `storage/` patterns to `.gitignore` if you do not want runtime artifacts committed (evaluate per your team’s preference).
+
+---
+
+## Evaluation workflow
+
+Use this flow when you want evidence artifacts for the 4 criteria (correctness, clarity/structure, depth, relevance):
+
+1. Export raw artifacts from backend memory:
+
+```powershell
+python job-agent-backend/scripts/export_evaluation_artifacts.py
+```
+
+2. Seed the evaluation templates from raw data:
+
+```powershell
+python evaluation/bootstrap_from_raw.py
+```
+
+3. Generate criterion summaries and an overall report:
+
+```powershell
+python evaluation/run_evaluation.py
+```
+
+Output artifacts are written under `evaluation/` (criterion-level `summary.csv` files plus `overall_summary.md`).
 
 ---
 
