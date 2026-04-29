@@ -1,0 +1,2 @@
+total_rows,avg_depth_baseline,avg_depth_improved,delta_points,reasoning_present_pct,examples_present_pct,tradeoffs_present_pct
+23,2.37,1.38,-0.99,4.35,4.35,0.0
