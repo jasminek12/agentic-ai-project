@@ -444,7 +444,9 @@ Intermediate/generated inputs for those summaries are also stored under the corr
 ## Roadmap
 
 - Stricter **CORS** and optional **auth** for multi-tenant deployments.
-- Optional **ignore rules** for generated `storage/` files in git.
+- In-browser resume editor with tracked changes.
+- Docker Compose for one-command setup.
+- Stretch goal: voice and video interview mode with real-time feedback.
 
 ---
 
